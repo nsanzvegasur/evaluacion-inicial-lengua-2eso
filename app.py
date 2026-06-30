@@ -27,7 +27,7 @@ except:
 tab1, tab2, tab3 = st.tabs(["🧑‍🎓 Examen", "📊 Dashboard", "👤 Alumno"])
 
 # ======================
-# VARIABLES RESPUESTAS (IMPORTANTÍSIMO)
+# VARIABLES RESPUESTAS
 # ======================
 q_comp = {}
 q_morf = {}
@@ -53,10 +53,10 @@ with tab1:
     st.write(EXAMEN["2ESO"]["comprension"]["texto"])
 
     for p in EXAMEN["2ESO"]["comprension"]["preguntas"]:
-        q_comp[p["id"]] = st.text_area(p["enunciado"], key=p["id"])
+        q_comp[p["id"]] = st.text_area(p["enunciado"], key=f"comp_{p['id']}")
 
     # =====================================================
-    # 2. MORFOLOGÍA (FIX CLAVE)
+    # 2. MORFOLOGÍA
     # =====================================================
     st.write("## 2. Morfología")
 
@@ -69,7 +69,7 @@ with tab1:
         for campo in p["campos"]:
             respuestas[campo] = st.text_area(
                 f"{p['palabra']} → {campo}",
-                key=f"{p['id']}_{campo}"
+                key=f"morf_{p['id']}_{campo}"
             )
 
         q_morf[p["id"]] = respuestas
@@ -80,7 +80,7 @@ with tab1:
     st.write("## 3. Semántica")
 
     for p in EXAMEN["2ESO"]["semantica"]:
-        q_sem[p["id"]] = st.text_area(p["enunciado"], key=p["id"])
+        q_sem[p["id"]] = st.text_area(p["enunciado"], key=f"sem_{p['id']}")
 
     # =====================================================
     # 4. LITERATURA
@@ -92,7 +92,7 @@ with tab1:
         if "texto" in p:
             st.info(p["texto"])
 
-        q_lit[p["id"]] = st.text_area(p["enunciado"], key=p["id"])
+        q_lit[p["id"]] = st.text_area(p["enunciado"], key=f"lit_{p['id']}")
 
     # =====================================================
     # 5. SINTAXIS
@@ -101,7 +101,10 @@ with tab1:
 
     for p in EXAMEN["2ESO"]["sintaxis"]:
         label = p.get("frase", p["enunciado"])
-        q_syn[p["id"]] = st.text_area(f"{label} → {p['enunciado']}", key=p["id"])
+        q_syn[p["id"]] = st.text_area(
+            f"{label} → {p['enunciado']}",
+            key=f"syn_{p['id']}"
+        )
 
     # =====================================================
     # ENVIAR EXAMEN
@@ -113,14 +116,28 @@ with tab1:
         else:
 
             # ======================
-            # SCORING BÁSICO
+            # SCORING SEGURO
             # ======================
+
+            def safe_score_dict(d):
+                return sum(len(str(v).split()) for v in d.values())
+
+            def safe_score_morf(d):
+                total = 0
+                count = 0
+                for v in d.values():
+                    for x in v.values():
+                        if str(x).strip():
+                            total += 1
+                        count += 1
+                return (total / count) * 10 if count else 0
+
             scores = {
-                "comprension": min(10, sum(len(v.split()) for v in q_comp.values()) / 8),
-                "morfologia": min(10, sum(len(str(v)).split()) for v in q_morf.values()) / 10,
-                "semantica": min(10, sum(len(v.split()) for v in q_sem.values()) / 6),
-                "literatura": min(10, sum(len(v.split()) for v in q_lit.values()) / 6),
-                "sintaxis": min(10, sum(len(v.split()) for v in q_syn.values()) / 6),
+                "comprension": min(10, safe_score_dict(q_comp) / 8),
+                "morfologia": min(10, safe_score_morf(q_morf)),
+                "semantica": min(10, safe_score_dict(q_sem) / 6),
+                "literatura": min(10, safe_score_dict(q_lit) / 6),
+                "sintaxis": min(10, safe_score_dict(q_syn) / 6),
             }
 
             total = sum(scores.values())
