@@ -90,7 +90,7 @@ with tab1:
     for p in EXAMEN["2ESO"]["literatura"]:
 
         if "texto" in p:
-            st.info(p["texto"])
+            st.write(p["texto"])
 
         q_lit[p["id"]] = st.text_area(p["enunciado"], key=f"lit_{p['id']}")
 
