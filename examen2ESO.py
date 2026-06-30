@@ -1,126 +1,65 @@
-# =========================
-# EXAMEN OPTIMIZADO ESO
-# DIAGNÓSTICO INICIAL REAL
-# =========================
-
 EXAMEN = {
     "2ESO": {
 
-        # =====================
-        # COMPRENSIÓN LECTORA
-        # =====================
+        # ======================
+        # 1. COMPRENSIÓN LECTORA
+        # ======================
         "comprension": {
-            "texto": """El tren de madrugada recorría lentamente la línea hacia la ciudad. La niebla cubría los campos y apenas dejaba ver el paisaje. En cada estación, el convoy se detenía unos segundos y volvía a avanzar.""",
+            "texto": """El tren de madrugada recorría lentamente la línea hacia la ciudad. La niebla cubría los campos y apenas dejaba ver el paisaje. En cada estación, el convoy se detenía unos segundos y volvía a avanzar con un chirrido metálico.
+
+En uno de los vagones, un hombre joven miraba por la ventana sin hablar. Sujetaba una mochila y parecía cansado. A su lado, una anciana dormía profundamente. El silencio dentro del vagón era extraño, como si todos evitaran mirarse.
+
+Cuando el tren llegó a la estación final, la luz del amanecer comenzó a aparecer entre los edificios. El viajero bajó lentamente, respiró hondo y caminó sin prisa hacia la salida.""",
 
             "preguntas": [
-                {
-                    "id": "CL1",
-                    "enunciado": "Indica el lugar, tiempo y ambiente del texto",
-                    "competencia": "comprension",
-                    "tipo": "abierta_corta",
-                    "keywords": ["tren", "madrugada", "niebla", "campo", "estación", "ciudad", "silencio", "oscuro"],
-                    "errores_tipicos": ["confunde tiempo y lugar", "no identifica ambiente", "respuesta incompleta"]
-                },
-
-                {
-                    "id": "CL2",
-                    "enunciado": "Escribe tres acciones que ocurren en el texto",
-                    "competencia": "comprension",
-                    "tipo": "lista",
-                    "keywords": ["recorría", "detenía", "avanzaba", "cubría", "dejaba ver"],
-                    "errores_tipicos": ["inventa acciones", "no usa el texto", "menos de 3 acciones"]
-                },
-
-                {
-                    "id": "CL3",
-                    "enunciado": "Resume el texto con tus palabras",
-                    "competencia": "comprension",
-                    "tipo": "resumen",
-                    "keywords": ["tren", "viaje", "noche", "llegada", "viajero", "paisaje"],
-                    "errores_tipicos": ["copia literal", "no resume", "omite idea principal"]
-                }
+                {"id": "c1", "enunciado": "Indica el lugar, el tiempo y el ambiente del texto"},
+                {"id": "c2", "enunciado": "Escribe tres acciones que ocurren en el texto"},
+                {"id": "c3", "enunciado": "Resume el texto con tus palabras"}
             ]
         },
 
-        # =====================
-        # MORFOLOGÍA
-        # =====================
+        # ======================
+        # 2. MORFOLOGÍA
+        # ======================
         "morfologia": [
-            {
-                "id": "M1",
-                "enunciado": "Analiza la palabra 'silencio'",
-                "competencia": "morfologia",
-                "keywords": ["sustantivo", "común", "abstracto", "lexema", "morfema"],
-                "errores_tipicos": ["confunde verbo", "no separa morfemas"]
-            },
-
-            {
-                "id": "M2",
-                "enunciado": "Clasifica: determinante o pronombre",
-                "competencia": "morfologia",
-                "keywords": ["determinante", "posesivo", "pronombre", "aquellos", "mi"],
-                "errores_tipicos": ["confunde función", "no identifica categoría"]
-            }
+            {"id": "m1", "enunciado": "Analiza la palabra 'silencio'"},
+            {"id": "m2", "enunciado": "Analiza la palabra 'lentamente'"},
+            {"id": "m3", "enunciado": "Analiza la palabra 'desconocido'"},
+            {"id": "m4", "enunciado": "Analiza la palabra 'mochilas'"}
         ],
 
-        # =====================
-        # SEMÁNTICA
-        # =====================
+        # ======================
+        # 3. SEMÁNTICA
+        # ======================
         "semantica": [
-            {
-                "id": "S1",
-                "enunciado": "Define polisemia y homonimia con ejemplo",
-                "competencia": "semantica",
-                "keywords": ["polisemia", "homonimia", "significado", "varios", "palabra"],
-                "errores_tipicos": ["mezcla conceptos", "no pone ejemplos"]
-            },
-
-            {
-                "id": "S2",
-                "enunciado": "Relaciones semánticas (hiperónimo / campo semántico)",
-                "competencia": "semantica",
-                "keywords": ["hiperónimo", "campo semántico", "categoría", "conjunto"],
-                "errores_tipicos": ["define sin ejemplos", "confunde términos"]
-            }
+            {"id": "s1", "enunciado": "Relaciona los conceptos: antonimia, campo semántico, polisemia, meronimia, hipónimos"},
+            {"id": "s2", "enunciado": "Define: polisemia, homonimia, hiperónimo, campo semántico con ejemplo"}
         ],
 
-        # =====================
-        # TEXTOS
-        # =====================
+        # ======================
+        # 4. TEXTOS
+        # ======================
         "textos": [
-            {
-                "id": "T1",
-                "enunciado": "Identifica tipo de texto (instructivo, expositivo, argumentativo)",
-                "competencia": "textos",
-                "keywords": ["instructivo", "expositivo", "argumentativo", "informar", "instrucciones"],
-                "errores_tipicos": ["confunde tipos", "no justifica"]
-            }
+            {"id": "t1", "enunciado": "Indica el tipo de texto A, B y C"},
+            {"id": "t2", "enunciado": "Explica la finalidad de uno de los textos"}
         ],
 
-        # =====================
-        # LITERATURA
-        # =====================
+        # ======================
+        # 5. LITERATURA
+        # ======================
         "literatura": [
-            {
-                "id": "L1",
-                "enunciado": "Analiza rima, verso y una figura literaria",
-                "competencia": "literatura",
-                "keywords": ["rima", "verso", "sinalefa", "personificación", "metáfora"],
-                "errores_tipicos": ["solo identifica sin explicar", "confunde figuras"]
-            }
+            {"id": "l1", "enunciado": "Número de versos, rima y métrica del poema"},
+            {"id": "l2", "enunciado": "Explica una sinalefa"},
+            {"id": "l3", "enunciado": "Identifica una personificación"}
         ],
 
-        # =====================
-        # SINTAXIS
-        # =====================
+        # ======================
+        # 6. SINTAXIS
+        # ======================
         "sintaxis": [
-            {
-                "id": "SY1",
-                "enunciado": "Indica si es frase u oración",
-                "competencia": "sintaxis",
-                "keywords": ["oración", "verbo", "sujeto", "frase", "sin verbo"],
-                "errores_tipicos": ["confunde oración con frase"]
-            }
+            {"id": "x1", "enunciado": "Indica si es frase u oración: Buenas tardes / Llueve mucho / etc."},
+            {"id": "x2", "enunciado": "Indica modalidad oracional de varias frases"},
+            {"id": "x3", "enunciado": "Convierte a estilo indirecto: 'Sí, lo hice ayer por la tarde'"}
         ]
     }
 }
