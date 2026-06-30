@@ -1,99 +1,126 @@
-import streamlit as st
-import pandas as pd
-from datetime import datetime
+# =========================
+# EXAMEN OPTIMIZADO ESO
+# DIAGNÓSTICO INICIAL REAL
+# =========================
 
-from analytics import radar_chart
-from pdf_report import generate_pdf
-from ai_correction import ai_score
+EXAMEN = {
+    "2ESO": {
 
-st.set_page_config(layout="wide")
+        # =====================
+        # COMPRENSIÓN LECTORA
+        # =====================
+        "comprension": {
+            "texto": """El tren de madrugada recorría lentamente la línea hacia la ciudad. La niebla cubría los campos y apenas dejaba ver el paisaje. En cada estación, el convoy se detenía unos segundos y volvía a avanzar.""",
 
-st.title("📘 Evaluación Inicial Lengua ESO (PRO IA)")
+            "preguntas": [
+                {
+                    "id": "CL1",
+                    "enunciado": "Indica el lugar, tiempo y ambiente del texto",
+                    "competencia": "comprension",
+                    "tipo": "abierta_corta",
+                    "keywords": ["tren", "madrugada", "niebla", "campo", "estación", "ciudad", "silencio", "oscuro"],
+                    "errores_tipicos": ["confunde tiempo y lugar", "no identifica ambiente", "respuesta incompleta"]
+                },
 
-# ======================
-# CARGA DATOS
-# ======================
-try:
-    df = pd.read_csv("results.csv")
-except:
-    df = pd.DataFrame()
+                {
+                    "id": "CL2",
+                    "enunciado": "Escribe tres acciones que ocurren en el texto",
+                    "competencia": "comprension",
+                    "tipo": "lista",
+                    "keywords": ["recorría", "detenía", "avanzaba", "cubría", "dejaba ver"],
+                    "errores_tipicos": ["inventa acciones", "no usa el texto", "menos de 3 acciones"]
+                },
 
-tab1, tab2, tab3 = st.tabs(["🧑‍🎓 Examen", "📊 Dashboard", "👤 Alumno"])
+                {
+                    "id": "CL3",
+                    "enunciado": "Resume el texto con tus palabras",
+                    "competencia": "comprension",
+                    "tipo": "resumen",
+                    "keywords": ["tren", "viaje", "noche", "llegada", "viajero", "paisaje"],
+                    "errores_tipicos": ["copia literal", "no resume", "omite idea principal"]
+                }
+            ]
+        },
 
-# ======================
-# EXAMEN
-# ======================
-with tab1:
+        # =====================
+        # MORFOLOGÍA
+        # =====================
+        "morfologia": [
+            {
+                "id": "M1",
+                "enunciado": "Analiza la palabra 'silencio'",
+                "competencia": "morfologia",
+                "keywords": ["sustantivo", "común", "abstracto", "lexema", "morfema"],
+                "errores_tipicos": ["confunde verbo", "no separa morfemas"]
+            },
 
-    name = st.text_input("Nombre")
-    group = st.text_input("Grupo")
+            {
+                "id": "M2",
+                "enunciado": "Clasifica: determinante o pronombre",
+                "competencia": "morfologia",
+                "keywords": ["determinante", "posesivo", "pronombre", "aquellos", "mi"],
+                "errores_tipicos": ["confunde función", "no identifica categoría"]
+            }
+        ],
 
-    q1 = st.text_area("Define sustantivo")
-    q2 = st.text_area("Resumen del texto")
-    q3 = st.text_area("Tipo de texto")
-    q4 = st.text_area("Análisis del poema")
+        # =====================
+        # SEMÁNTICA
+        # =====================
+        "semantica": [
+            {
+                "id": "S1",
+                "enunciado": "Define polisemia y homonimia con ejemplo",
+                "competencia": "semantica",
+                "keywords": ["polisemia", "homonimia", "significado", "varios", "palabra"],
+                "errores_tipicos": ["mezcla conceptos", "no pone ejemplos"]
+            },
 
-    if st.button("Enviar"):
+            {
+                "id": "S2",
+                "enunciado": "Relaciones semánticas (hiperónimo / campo semántico)",
+                "competencia": "semantica",
+                "keywords": ["hiperónimo", "campo semántico", "categoría", "conjunto"],
+                "errores_tipicos": ["define sin ejemplos", "confunde términos"]
+            }
+        ],
 
-        scores = {
-            "morfologia": len(q1.split())/2,
-            "comprension": len(q2.split())/2,
-            "textos": len(q3.split())/2,
-            "literatura": len(q4.split())/2
-        }
+        # =====================
+        # TEXTOS
+        # =====================
+        "textos": [
+            {
+                "id": "T1",
+                "enunciado": "Identifica tipo de texto (instructivo, expositivo, argumentativo)",
+                "competencia": "textos",
+                "keywords": ["instructivo", "expositivo", "argumentativo", "informar", "instrucciones"],
+                "errores_tipicos": ["confunde tipos", "no justifica"]
+            }
+        ],
 
-        # LIMITAMOS A 10
-        scores = {k: min(10, v) for k, v in scores.items()}
+        # =====================
+        # LITERATURA
+        # =====================
+        "literatura": [
+            {
+                "id": "L1",
+                "enunciado": "Analiza rima, verso y una figura literaria",
+                "competencia": "literatura",
+                "keywords": ["rima", "verso", "sinalefa", "personificación", "metáfora"],
+                "errores_tipicos": ["solo identifica sin explicar", "confunde figuras"]
+            }
+        ],
 
-        total = sum(scores.values())
-
-        row = {
-            "name": name,
-            "group": group,
-            "date": datetime.now(),
-            **scores,
-            "total": total
-        }
-
-        df = pd.concat([df, pd.DataFrame([row])])
-        df.to_csv("results.csv", index=False)
-
-        st.success("Guardado")
-
-        # RADAR
-        st.plotly_chart(radar_chart(scores))
-
-        # PDF
-        pdf_file = generate_pdf(name, scores, "Diagnóstico automático")
-        st.download_button("Descargar informe PDF", open(pdf_file, "rb"), file_name=pdf_file)
-
-# ======================
-# DASHBOARD CLASE
-# ======================
-with tab2:
-
-    st.subheader("📊 Comparativa clase vs alumno")
-
-    if not df.empty:
-
-        st.bar_chart(df[["morfologia","comprension","textos","literatura"]].mean())
-
-        alumno = st.selectbox("Alumno", df["name"].unique())
-
-        user = df[df["name"] == alumno].iloc[-1]
-
-        st.write("Perfil alumno vs clase")
-
-        st.write(user)
-
-# ======================
-# ALUMNO
-# ======================
-with tab3:
-
-    st.subheader("Detalle alumno")
-
-    if not df.empty:
-        alumno = st.selectbox("Selecciona alumno", df["name"].unique())
-
-        st.dataframe(df[df["name"] == alumno])
+        # =====================
+        # SINTAXIS
+        # =====================
+        "sintaxis": [
+            {
+                "id": "SY1",
+                "enunciado": "Indica si es frase u oración",
+                "competencia": "sintaxis",
+                "keywords": ["oración", "verbo", "sujeto", "frase", "sin verbo"],
+                "errores_tipicos": ["confunde oración con frase"]
+            }
+        ]
+    }
+}
