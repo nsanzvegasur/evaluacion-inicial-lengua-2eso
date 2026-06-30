@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 
 from analytics import radar_chart, comparativa, generar_perfil
 from pdf_report import generar_pdf
-from examen2ESO import EXAMEN   # ✔ tu archivo real
+from examen2ESO import EXAMEN
 
 st.set_page_config(layout="wide")
 
@@ -27,6 +27,15 @@ except:
 tab1, tab2, tab3 = st.tabs(["🧑‍🎓 Examen", "📊 Dashboard", "👤 Alumno"])
 
 # ======================
+# VARIABLES RESPUESTAS (IMPORTANTÍSIMO)
+# ======================
+q_comp = {}
+q_morf = {}
+q_sem = {}
+q_lit = {}
+q_syn = {}
+
+# ======================
 # EXAMEN
 # ======================
 with tab1:
@@ -36,57 +45,67 @@ with tab1:
     name = st.text_input("Nombre y apellidos")
     group = st.text_input("Grupo")
 
-    if "EXAMEN" in globals():
+    # =====================================================
+    # 1. COMPRENSIÓN
+    # =====================================================
+    st.write("## 1. Comprensión lectora")
 
-        # ======================
-        # COMPRENSIÓN
-        # ======================
-        st.write("## 1. Comprensión lectora")
-        st.write(EXAMEN["2ESO"]["comprension"]["texto"])
+    st.write(EXAMEN["2ESO"]["comprension"]["texto"])
 
-        q_comp = {}
-        for p in EXAMEN["2ESO"]["comprension"]["preguntas"]:
-            q_comp[p["id"]] = st.text_area(p["enunciado"])
+    for p in EXAMEN["2ESO"]["comprension"]["preguntas"]:
+        q_comp[p["id"]] = st.text_area(p["enunciado"], key=p["id"])
 
-        # ======================
-        # MORFOLOGÍA
-        # ======================
-        st.write("## 2. Morfología")
+    # =====================================================
+    # 2. MORFOLOGÍA (FIX CLAVE)
+    # =====================================================
+    st.write("## 2. Morfología")
 
-        q_morf = {}
-        for p in EXAMEN["2ESO"]["morfologia"]:
-            q_morf[p["id"]] = st.text_area(p["enunciado"])
+    for p in EXAMEN["2ESO"]["morfologia"]:
 
-        # ======================
-        # SEMÁNTICA
-        # ======================
-        st.write("## 3. Semántica")
+        st.write(f"📌 Palabra: **{p['palabra']}**")
 
-        q_sem = {}
-        for p in EXAMEN["2ESO"]["semantica"]:
-            q_sem[p["id"]] = st.text_area(p["enunciado"])
+        respuestas = {}
 
-        # ======================
-        # LITERATURA
-        # ======================
-        st.write("## 4. Literatura")
+        for campo in p["campos"]:
+            respuestas[campo] = st.text_area(
+                f"{p['palabra']} → {campo}",
+                key=f"{p['id']}_{campo}"
+            )
 
-        q_lit = {}
-        for p in EXAMEN["2ESO"]["literatura"]:
-            q_lit[p["id"]] = st.text_area(p["enunciado"])
+        q_morf[p["id"]] = respuestas
 
-        # ======================
-        # SINTAXIS
-        # ======================
-        st.write("## 5. Sintaxis")
+    # =====================================================
+    # 3. SEMÁNTICA
+    # =====================================================
+    st.write("## 3. Semántica")
 
-        q_syn = {}
-        for p in EXAMEN["2ESO"]["sintaxis"]:
-            q_syn[p["id"]] = st.text_area(p["enunciado"])
+    for p in EXAMEN["2ESO"]["semantica"]:
+        q_sem[p["id"]] = st.text_area(p["enunciado"], key=p["id"])
 
-    # ======================
+    # =====================================================
+    # 4. LITERATURA
+    # =====================================================
+    st.write("## 4. Literatura")
+
+    for p in EXAMEN["2ESO"]["literatura"]:
+
+        if "texto" in p:
+            st.info(p["texto"])
+
+        q_lit[p["id"]] = st.text_area(p["enunciado"], key=p["id"])
+
+    # =====================================================
+    # 5. SINTAXIS
+    # =====================================================
+    st.write("## 5. Sintaxis")
+
+    for p in EXAMEN["2ESO"]["sintaxis"]:
+        label = p.get("frase", p["enunciado"])
+        q_syn[p["id"]] = st.text_area(f"{label} → {p['enunciado']}", key=p["id"])
+
+    # =====================================================
     # ENVIAR EXAMEN
-    # ======================
+    # =====================================================
     if st.button("📤 Enviar examen"):
 
         if not name or not group:
@@ -94,11 +113,11 @@ with tab1:
         else:
 
             # ======================
-            # SCORING (BÁSICO SIN IA)
+            # SCORING BÁSICO
             # ======================
             scores = {
                 "comprension": min(10, sum(len(v.split()) for v in q_comp.values()) / 8),
-                "morfologia": min(10, sum(len(v.split()) for v in q_morf.values()) / 6),
+                "morfologia": min(10, sum(len(str(v)).split()) for v in q_morf.values()) / 10,
                 "semantica": min(10, sum(len(v.split()) for v in q_sem.values()) / 6),
                 "literatura": min(10, sum(len(v.split()) for v in q_lit.values()) / 6),
                 "sintaxis": min(10, sum(len(v.split()) for v in q_syn.values()) / 6),
