@@ -2,13 +2,12 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-from analytics import radar_chart
-from pdf_report import generate_pdf
-from ai_correction import ai_score
+from analytics import radar_chart, comparativa, generar_perfil
+from pdf_report import generar_pdf
 
 st.set_page_config(layout="wide")
 
-st.title("📘 Evaluación Inicial Lengua ESO (PRO IA)")
+st.title("📘 Evaluación Inicial Lengua ESO")
 
 # ======================
 # CARGA DATOS
@@ -16,7 +15,12 @@ st.title("📘 Evaluación Inicial Lengua ESO (PRO IA)")
 try:
     df = pd.read_csv("results.csv")
 except:
-    df = pd.DataFrame()
+    df = pd.DataFrame(columns=[
+        "name", "group", "date",
+        "comprension", "morfologia",
+        "textos", "literatura", "sintaxis",
+        "total"
+    ])
 
 tab1, tab2, tab3 = st.tabs(["🧑‍🎓 Examen", "📊 Dashboard", "👤 Alumno"])
 
@@ -25,6 +29,8 @@ tab1, tab2, tab3 = st.tabs(["🧑‍🎓 Examen", "📊 Dashboard", "👤 Alumno
 # ======================
 with tab1:
 
+    st.subheader("Evaluación inicial")
+
     name = st.text_input("Nombre")
     group = st.text_input("Grupo")
 
@@ -32,68 +38,94 @@ with tab1:
     q2 = st.text_area("Resumen del texto")
     q3 = st.text_area("Tipo de texto")
     q4 = st.text_area("Análisis del poema")
+    q5 = st.text_area("Sintaxis (frase u oración)")
 
-    if st.button("Enviar"):
+    if st.button("Enviar examen"):
 
-        scores = {
-            "morfologia": len(q1.split())/2,
-            "comprension": len(q2.split())/2,
-            "textos": len(q3.split())/2,
-            "literatura": len(q4.split())/2
-        }
+        if not name or not group:
+            st.error("Introduce nombre y grupo")
+        else:
 
-        # LIMITAMOS A 10
-        scores = {k: min(10, v) for k, v in scores.items()}
+            scores = {
+                "comprension": min(10, len(q2.split()) / 3),
+                "morfologia": min(10, len(q1.split()) / 2),
+                "textos": min(10, len(q3.split()) / 2),
+                "literatura": min(10, len(q4.split()) / 2),
+                "sintaxis": min(10, len(q5.split()) / 2),
+            }
 
-        total = sum(scores.values())
+            total = sum(scores.values())
 
-        row = {
-            "name": name,
-            "group": group,
-            "date": datetime.now(),
-            **scores,
-            "total": total
-        }
+            row = {
+                "name": name,
+                "group": group,
+                "date": datetime.now(),
+                **scores,
+                "total": total
+            }
 
-        df = pd.concat([df, pd.DataFrame([row])])
-        df.to_csv("results.csv", index=False)
+            df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+            df.to_csv("results.csv", index=False)
 
-        st.success("Guardado")
+            st.success("Examen guardado correctamente")
 
-        # RADAR
-        st.plotly_chart(radar_chart(scores))
+            # ======================
+            # RADAR CHART
+            # ======================
+            st.plotly_chart(radar_chart(scores, name))
 
-        # PDF
-        pdf_file = generate_pdf(name, scores, "Diagnóstico automático")
-        st.download_button("Descargar informe PDF", open(pdf_file, "rb"), file_name=pdf_file)
+            # ======================
+            # PERFIL
+            # ======================
+            perfil = generar_perfil(scores)
+            st.write("### 🧠 Perfil del alumno")
+            for p in perfil:
+                st.write(p)
+
+            # ======================
+            # PDF
+            # ======================
+            pdf_file = generar_pdf(name, group, scores, perfil)
+
+            with open(pdf_file, "rb") as f:
+                st.download_button(
+                    "📄 Descargar informe PDF",
+                    f,
+                    file_name=pdf_file
+                )
 
 # ======================
 # DASHBOARD CLASE
 # ======================
 with tab2:
 
-    st.subheader("📊 Comparativa clase vs alumno")
+    st.subheader("📊 Comparativa clase")
 
     if not df.empty:
 
-        st.bar_chart(df[["morfologia","comprension","textos","literatura"]].mean())
+        competencias = ["comprension", "morfologia", "textos", "literatura", "sintaxis"]
 
-        alumno = st.selectbox("Alumno", df["name"].unique())
+        st.bar_chart(df[competencias].mean())
+
+        alumno = st.selectbox("Selecciona alumno", df["name"].unique())
 
         user = df[df["name"] == alumno].iloc[-1]
 
-        st.write("Perfil alumno vs clase")
-
+        st.write("### 👤 Perfil individual")
         st.write(user)
+
+        st.write("### 📊 Comparativa alumno vs clase")
+        st.plotly_chart(comparativa(user, df))
 
 # ======================
 # ALUMNO
 # ======================
 with tab3:
 
-    st.subheader("Detalle alumno")
+    st.subheader("📋 Historial alumno")
 
     if not df.empty:
+
         alumno = st.selectbox("Selecciona alumno", df["name"].unique())
 
         st.dataframe(df[df["name"] == alumno])
