@@ -29,7 +29,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 },
                 {
                     "id": "c1_personajes",
-                    "enunciado": "1.1. Personajes",
+                    "enunciado": "1.1. Escribe los dos personajes que aparecen. Sepáralos por comas o escribe uno en cada línea.",
                     "ayuda": "Escribe los dos personajes que aparecen. Sepáralos por comas o escribe uno en cada línea.",
                     "tipo": "lista",
                     "puntos": 0.40,
