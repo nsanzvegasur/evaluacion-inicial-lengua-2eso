@@ -21,12 +21,15 @@ def nombres_competencias():
     }
 
 
-def radar_chart(alumno_scores, nombre="Alumno"):
+def radar_chart(
+    alumno_scores,
+    nombre="Alumno"
+):
 
     etiquetas = nombres_competencias()
 
     valores = [
-        alumno_scores.get(c, 0)
+        float(alumno_scores.get(c, 0))
         for c in COMPETENCIAS
     ]
 
@@ -35,15 +38,15 @@ def radar_chart(alumno_scores, nombre="Alumno"):
         for c in COMPETENCIAS
     ]
 
-    valores.append(valores[0])
-    categorias.append(categorias[0])
+    valores_cerrados = valores + [valores[0]]
+    categorias_cerradas = categorias + [categorias[0]]
 
     fig = go.Figure()
 
     fig.add_trace(
         go.Scatterpolar(
-            r=valores,
-            theta=categorias,
+            r=valores_cerrados,
+            theta=categorias_cerradas,
             fill="toself",
             name=nombre
         )
@@ -57,31 +60,48 @@ def radar_chart(alumno_scores, nombre="Alumno"):
                 range=[0, 10]
             )
         ),
-        showlegend=False
+        showlegend=False,
+        margin=dict(
+            l=40,
+            r=40,
+            t=70,
+            b=40
+        )
     )
 
     return fig
 
 
-def comparativa(alumno, df):
+def comparativa(
+    alumno,
+    df
+):
 
     etiquetas = nombres_competencias()
 
-    media_clase = df[COMPETENCIAS].mean()
+    columnas_disponibles = [
+        c for c in COMPETENCIAS
+        if c in df.columns
+    ]
+
+    if not columnas_disponibles:
+        return go.Figure()
+
+    media_clase = df[columnas_disponibles].mean()
 
     valores_alumno = [
         float(alumno.get(c, 0))
-        for c in COMPETENCIAS
+        for c in columnas_disponibles
     ]
 
     valores_clase = [
         float(media_clase.get(c, 0))
-        for c in COMPETENCIAS
+        for c in columnas_disponibles
     ]
 
     nombres = [
         etiquetas[c]
-        for c in COMPETENCIAS
+        for c in columnas_disponibles
     ]
 
     fig = go.Figure()
@@ -108,6 +128,12 @@ def comparativa(alumno, df):
         yaxis=dict(
             title="Nota sobre 10",
             range=[0, 10]
+        ),
+        margin=dict(
+            l=40,
+            r=40,
+            t=70,
+            b=60
         )
     )
 
