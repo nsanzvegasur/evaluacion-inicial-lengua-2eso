@@ -1,6 +1,4 @@
-
---- requirements ---
 streamlit
 pandas
 plotly
-language-tool-python
+reportlab==4.2.2
