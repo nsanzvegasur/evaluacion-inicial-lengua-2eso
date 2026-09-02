@@ -1,377 +1,250 @@
 from fpdf import FPDF
 from datetime import datetime
-import os
-
 
 # ============================================================
-# PDF
+
+# GENERADOR DE INFORME PDF
+
 # ============================================================
 
-def limpiar(texto):
+def generar_pdf(nombre, grupo, scores, perfil):
 
-    texto = str(texto)
+```
+pdf = FPDF()
+pdf.set_auto_page_break(
+    auto=True,
+    margin=15
+)
 
-    reemplazos = {
-        "á": "a",
-        "é": "e",
-        "í": "i",
-        "ó": "o",
-        "ú": "u",
-        "ñ": "n",
-        "Á": "A",
-        "É": "E",
-        "Í": "I",
-        "Ó": "O",
-        "Ú": "U",
-        "Ñ": "N",
-        "🔴": "",
-        "🟠": "",
-        "🟡": "",
-        "🟢": ""
-    }
+pdf.add_page()
 
-    for viejo, nuevo in reemplazos.items():
-        texto = texto.replace(
-            viejo,
-            nuevo
-        )
+# ========================================================
+# TÍTULO
+# ========================================================
 
-    return texto
+pdf.set_font(
+    "Arial",
+    "B",
+    16
+)
 
+pdf.cell(
+    0,
+    10,
+    "INFORME DE EVALUACION INICIAL",
+    ln=True
+)
 
-def generar_pdf(
-    nombre,
-    grupo,
-    scores,
-    perfil,
-    faltas_ortografia=0,
-    faltas_tildes=0,
-    presentacion=0,
-    nota_inicial=0,
-    nota_final=0
-):
+pdf.ln(5)
 
-    pdf = FPDF()
+# ========================================================
+# DATOS
+# ========================================================
 
-    pdf.set_auto_page_break(
-        auto=True,
-        margin=15
-    )
+pdf.set_font(
+    "Arial",
+    size=11
+)
 
-    pdf.add_page()
+pdf.cell(
+    0,
+    8,
+    f"Nombre y apellidos: {nombre}",
+    ln=True
+)
 
-    # ========================================================
-    # TÍTULO
-    # ========================================================
+pdf.cell(
+    0,
+    8,
+    f"Grupo: {grupo}",
+    ln=True
+)
 
-    pdf.set_font(
-        "Arial",
-        "B",
-        16
-    )
+pdf.cell(
+    0,
+    8,
+    f"Fecha: {datetime.now().strftime('%d/%m/%Y')}",
+    ln=True
+)
 
-    pdf.cell(
-        0,
-        10,
-        "INFORME DE EVALUACION INICIAL",
-        ln=True
-    )
+pdf.ln(8)
 
-    pdf.set_font(
-        "Arial",
-        "",
-        11
-    )
+# ========================================================
+# RESULTADOS
+# ========================================================
 
-    pdf.cell(
-        0,
-        8,
-        "Lengua Castellana y Literatura - 2 ESO",
-        ln=True
-    )
+pdf.set_font(
+    "Arial",
+    "B",
+    13
+)
 
-    pdf.ln(5)
+pdf.cell(
+    0,
+    8,
+    "RESULTADOS POR COMPETENCIA",
+    ln=True
+)
 
+pdf.set_font(
+    "Arial",
+    size=11
+)
 
-    # ========================================================
-    # DATOS
-    # ========================================================
+nombres = {
+    "comprension": "Comprension lectora",
+    "morfologia": "Morfologia",
+    "semantica": "Semantica",
+    "literatura": "Literatura",
+    "sintaxis": "Sintaxis"
+}
 
-    pdf.set_font(
-        "Arial",
-        "B",
-        11
-    )
+for clave, valor in scores.items():
 
-    pdf.cell(
-        0,
-        8,
-        "DATOS DEL ALUMNO",
-        ln=True
-    )
-
-    pdf.set_font(
-        "Arial",
-        "",
-        11
-    )
-
-    pdf.cell(
-        0,
-        7,
-        f"Nombre y apellidos: {limpiar(nombre)}",
-        ln=True
-    )
-
-    pdf.cell(
-        0,
-        7,
-        f"Grupo: {limpiar(grupo)}",
-        ln=True
-    )
-
-    pdf.cell(
-        0,
-        7,
-        f"Fecha: {datetime.now().strftime('%d/%m/%Y')}",
-        ln=True
-    )
-
-    pdf.ln(5)
-
-
-    # ========================================================
-    # CALIFICACIÓN
-    # ========================================================
-
-    pdf.set_font(
-        "Arial",
-        "B",
-        11
+    nombre_competencia = nombres.get(
+        clave,
+        clave
     )
 
     pdf.cell(
         0,
         8,
-        "CALIFICACION",
+        f"{nombre_competencia}: {valor:.2f}/10",
         ln=True
     )
 
-    pdf.set_font(
-        "Arial",
-        "",
-        11
+pdf.ln(5)
+
+# ========================================================
+# NOTA GLOBAL
+# ========================================================
+
+nota_global = (
+    sum(scores.values())
+    / len(scores)
+)
+
+pdf.set_font(
+    "Arial",
+    "B",
+    14
+)
+
+pdf.cell(
+    0,
+    10,
+    f"NOTA GLOBAL: {nota_global:.2f}/10",
+    ln=True
+)
+
+pdf.ln(5)
+
+# ========================================================
+# DIAGNÓSTICO
+# ========================================================
+
+pdf.set_font(
+    "Arial",
+    "B",
+    13
+)
+
+pdf.cell(
+    0,
+    8,
+    "DIAGNOSTICO PEDAGOGICO",
+    ln=True
+)
+
+pdf.set_font(
+    "Arial",
+    size=11
+)
+
+for item in perfil:
+
+    # Quitamos emojis para evitar errores de codificacion
+    texto = (
+        item
+        .replace("🔴", "")
+        .replace("🟠", "")
+        .replace("🟢", "")
     )
-
-    pdf.cell(
-        0,
-        7,
-        f"Nota inicial: {nota_inicial:.2f} / 10",
-        ln=True
-    )
-
-    pdf.cell(
-        0,
-        7,
-        f"Faltas de ortografia: {faltas_ortografia}",
-        ln=True
-    )
-
-    pdf.cell(
-        0,
-        7,
-        f"Faltas de tilde: {faltas_tildes}",
-        ln=True
-    )
-
-    descuento_ortografia = min(
-        2,
-        faltas_ortografia * 0.2
-        + faltas_tildes * 0.1
-    )
-
-    pdf.cell(
-        0,
-        7,
-        f"Descuento ortografico: -{descuento_ortografia:.2f}",
-        ln=True
-    )
-
-    pdf.cell(
-        0,
-        7,
-        f"Descuento por presentacion: -{float(presentacion):.2f}",
-        ln=True
-    )
-
-    pdf.set_font(
-        "Arial",
-        "B",
-        14
-    )
-
-    pdf.cell(
-        0,
-        10,
-        f"NOTA FINAL: {nota_final:.2f} / 10",
-        ln=True
-    )
-
-    pdf.ln(5)
-
-
-    # ========================================================
-    # RESULTADOS
-    # ========================================================
-
-    nombres = {
-        "comprension": "Comprension lectora",
-        "morfologia": "Morfologia",
-        "semantica": "Semantica",
-        "textos": "Textos",
-        "literatura": "Literatura",
-        "sintaxis": "Sintaxis",
-        "dialogo": "Dialogo"
-    }
-
-    pdf.set_font(
-        "Arial",
-        "B",
-        11
-    )
-
-    pdf.cell(
-        0,
-        8,
-        "RESULTADOS POR APARTADO",
-        ln=True
-    )
-
-    pdf.set_font(
-        "Arial",
-        "",
-        11
-    )
-
-    for clave, valor in scores.items():
-
-        if clave == "total":
-            continue
-
-        nombre_apartado = nombres.get(
-            clave,
-            clave
-        )
-
-        pdf.cell(
-            0,
-            7,
-            f"{nombre_apartado}: {float(valor):.2f}",
-            ln=True
-        )
-
-    pdf.ln(5)
-
-
-    # ========================================================
-    # DIAGNÓSTICO
-    # ========================================================
-
-    pdf.set_font(
-        "Arial",
-        "B",
-        11
-    )
-
-    pdf.cell(
-        0,
-        8,
-        "DIAGNOSTICO PEDAGOGICO",
-        ln=True
-    )
-
-    pdf.set_font(
-        "Arial",
-        "",
-        10
-    )
-
-    for item in perfil:
-
-        pdf.multi_cell(
-            0,
-            7,
-            limpiar("- " + item)
-        )
-
-    pdf.ln(5)
-
-
-    # ========================================================
-    # OBSERVACIÓN
-    # ========================================================
-
-    pdf.set_font(
-        "Arial",
-        "B",
-        11
-    )
-
-    pdf.cell(
-        0,
-        8,
-        "OBSERVACION GENERAL",
-        ln=True
-    )
-
-    pdf.set_font(
-        "Arial",
-        "",
-        10
-    )
-
-    if nota_final < 5:
-
-        observacion = (
-            "El alumno presenta areas que requieren "
-            "refuerzo dentro de las competencias evaluadas."
-        )
-
-    elif nota_final < 7:
-
-        observacion = (
-            "El alumno presenta un nivel adecuado, "
-            "aunque existen algunas areas susceptibles de mejora."
-        )
-
-    else:
-
-        observacion = (
-            "El alumno presenta un buen nivel general "
-            "en las competencias evaluadas."
-        )
 
     pdf.multi_cell(
         0,
-        7,
-        observacion
+        8,
+        "- " + texto.strip()
     )
 
+pdf.ln(5)
 
-    # ========================================================
-    # GUARDAR
-    # ========================================================
+# ========================================================
+# OBSERVACIÓN
+# ========================================================
 
-    nombre_archivo = limpiar(
-        nombre.replace(" ", "_")
+pdf.set_font(
+    "Arial",
+    "B",
+    13
+)
+
+pdf.cell(
+    0,
+    8,
+    "OBSERVACION GENERAL",
+    ln=True
+)
+
+pdf.set_font(
+    "Arial",
+    size=11
+)
+
+if nota_global < 5:
+
+    observacion = (
+        "El alumno necesita refuerzo en varias "
+        "competencias basicas de Lengua."
     )
 
-    nombre_archivo = (
-        f"informe_{nombre_archivo}.pdf"
+elif nota_global < 7:
+
+    observacion = (
+        "El alumno presenta un nivel adecuado, "
+        "aunque existen areas concretas de mejora."
     )
 
-    pdf.output(
-        nombre_archivo
+else:
+
+    observacion = (
+        "El alumno presenta un buen dominio general "
+        "de las competencias evaluadas."
     )
 
-    return nombre_archivo
+pdf.multi_cell(
+    0,
+    8,
+    observacion
+)
+
+# ========================================================
+# GUARDAR
+# ========================================================
+
+nombre_archivo = (
+    nombre
+    .strip()
+    .replace(" ", "_")
+    .replace("/", "_")
+    .replace("\\", "_")
+)
+
+filename = (
+    f"informe_{nombre_archivo}.pdf"
+)
+
+pdf.output(filename)
+
+return filename
+```
