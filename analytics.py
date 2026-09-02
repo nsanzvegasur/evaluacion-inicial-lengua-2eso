@@ -1,5 +1,5 @@
-import plotly.graph_objects as go
 import pandas as pd
+import plotly.graph_objects as go
 
 
 COMPETENCIAS = [
@@ -28,35 +28,35 @@ def numero(valor):
         return 0.0
 
 
-def radar_chart(alumno_scores, nombre="Alumno"):
-    etiquetas = nombres_competencias()
+def radar_chart(datos, titulo="Perfil competencial"):
+    nombres = nombres_competencias()
 
     valores = [
-        numero(alumno_scores.get(c, 0))
+        numero(datos.get(c, 0))
         for c in COMPETENCIAS
     ]
 
-    categorias = [
-        etiquetas[c]
+    etiquetas = [
+        nombres[c]
         for c in COMPETENCIAS
     ]
 
     valores.append(valores[0])
-    categorias.append(categorias[0])
+    etiquetas.append(etiquetas[0])
 
-    fig = go.Figure()
+    figura = go.Figure()
 
-    fig.add_trace(
+    figura.add_trace(
         go.Scatterpolar(
             r=valores,
-            theta=categorias,
+            theta=etiquetas,
             fill="toself",
-            name=nombre
+            name="Resultado"
         )
     )
 
-    fig.update_layout(
-        title=f"Perfil competencial: {nombre}",
+    figura.update_layout(
+        title=titulo,
         polar=dict(
             radialaxis=dict(
                 visible=True,
@@ -66,127 +66,102 @@ def radar_chart(alumno_scores, nombre="Alumno"):
         showlegend=False
     )
 
-    return fig
+    return figura
 
 
-def comparativa(alumno, df):
-    etiquetas = nombres_competencias()
-
+def comparativa_clase(df):
     if df is None or df.empty:
-        media_clase = {
-            c: 0
-            for c in COMPETENCIAS
-        }
-    else:
-        media_clase = {}
+        return None
 
-        for competencia in COMPETENCIAS:
-            if competencia in df.columns:
-                media_clase[competencia] = pd.to_numeric(
-                    df[competencia],
-                    errors="coerce"
-                ).fillna(0).mean()
-            else:
-                media_clase[competencia] = 0
-
-    valores_alumno = [
-        numero(alumno.get(c, 0))
-        for c in COMPETENCIAS
+    columnas = [
+        c for c in COMPETENCIAS
+        if c in df.columns
     ]
 
-    valores_clase = [
-        numero(media_clase.get(c, 0))
-        for c in COMPETENCIAS
+    if not columnas:
+        return None
+
+    medias = []
+
+    for columna in columnas:
+        medias.append(
+            pd.to_numeric(
+                df[columna],
+                errors="coerce"
+            ).mean()
+        )
+
+    etiquetas = [
+        nombres_competencias()[c]
+        for c in columnas
     ]
 
-    nombres = [
-        etiquetas[c]
-        for c in COMPETENCIAS
-    ]
+    figura = go.Figure()
 
-    fig = go.Figure()
-
-    fig.add_trace(
+    figura.add_trace(
         go.Bar(
-            x=nombres,
-            y=valores_alumno,
-            name="Alumno"
+            x=etiquetas,
+            y=medias
         )
     )
 
-    fig.add_trace(
-        go.Bar(
-            x=nombres,
-            y=valores_clase,
-            name="Media clase"
-        )
-    )
-
-    fig.update_layout(
-        title="Alumno vs. media de la clase",
-        barmode="group",
+    figura.update_layout(
+        title="Media de la clase por competencia",
         yaxis=dict(
-            title="Nota sobre 10",
+            title="Nota",
             range=[0, 10]
         )
     )
 
-    return fig
+    return figura
 
 
-def generar_perfil(scores):
-    perfil = []
+def resumen_clase(df):
+    if df is None or df.empty:
+        return {}
 
-    comprension = numero(scores.get("comprension", 0))
-    morfologia = numero(scores.get("morfologia", 0))
-    semantica = numero(scores.get("semantica", 0))
-    literatura = numero(scores.get("literatura", 0))
-    sintaxis = numero(scores.get("sintaxis", 0))
+    resultado = {}
 
-    if comprension < 5:
-        perfil.append("Dificultades en comprensión lectora.")
-    elif comprension >= 7:
-        perfil.append("Buen dominio de la comprensión lectora.")
-
-    if morfologia < 5:
-        perfil.append(
-            "Necesita refuerzo en morfología y categorías gramaticales."
-        )
-    elif morfologia >= 7:
-        perfil.append(
-            "Buen dominio del análisis morfológico."
+    if "nota_final" in df.columns:
+        notas = pd.to_numeric(
+            df["nota_final"],
+            errors="coerce"
         )
 
-    if semantica < 5:
-        perfil.append(
-            "Necesita reforzar las relaciones semánticas."
-        )
-    elif semantica >= 7:
-        perfil.append(
-            "Buen dominio de las relaciones semánticas."
+        resultado["media"] = round(
+            notas.mean(),
+            2
         )
 
-    if literatura < 5:
-        perfil.append(
-            "Necesita refuerzo en métrica y recursos literarios."
-        )
-    elif literatura >= 7:
-        perfil.append(
-            "Buen dominio de los contenidos literarios."
+        resultado["aprobados"] = int(
+            (notas >= 5).sum()
         )
 
-    if sintaxis < 5:
-        perfil.append(
-            "Necesita reforzar frase, oración y modalidad oracional."
-        )
-    elif sintaxis >= 7:
-        perfil.append(
-            "Buen dominio de los contenidos sintácticos evaluados."
+        resultado["suspensos"] = int(
+            (notas < 5).sum()
         )
 
-    if not perfil:
-        perfil.append(
-            "Presenta un nivel equilibrado en las competencias evaluadas."
+    return resultado
+
+
+def generar_perfil(datos):
+    resultado = {}
+
+    for competencia in COMPETENCIAS:
+        valor = numero(
+            datos.get(competencia, 0)
         )
 
-    return perfil
+        if valor >= 8:
+            nivel = "Fortaleza"
+        elif valor >= 5:
+            nivel = "Nivel adecuado"
+        else:
+            nivel = "Necesita refuerzo"
+
+        resultado[competencia] = {
+            "nota": round(valor, 2),
+            "nivel": nivel
+        }
+
+    return resultado
