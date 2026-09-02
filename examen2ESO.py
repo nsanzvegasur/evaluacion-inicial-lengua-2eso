@@ -51,7 +51,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 },
                 {
                     "id": "c2_accion1",
-                    "enunciado": "1.2. Acción 1",
+                    "enunciado": "1.2. Acción 1. Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
                     "ayuda": "Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
                     "tipo": "accion",
                     "puntos": 0.50,
@@ -70,7 +70,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 },
                 {
                     "id": "c2_accion2",
-                    "enunciado": "1.2. Acción 2",
+                    "enunciado": "1.2. Acción 2.Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
                     "ayuda": "Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
                     "tipo": "accion",
                     "puntos": 0.50,
@@ -89,7 +89,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 },
                 {
                     "id": "c2_accion3",
-                    "enunciado": "1.2. Acción 3",
+                    "enunciado": "1.2. Acción 3.Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
                     "ayuda": "Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
                     "tipo": "accion",
                     "puntos": 0.50,
