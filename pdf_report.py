@@ -1,6 +1,7 @@
 import os
 import re
 import unicodedata
+from datetime import datetime
 
 from fpdf import FPDF
 
@@ -10,7 +11,6 @@ def limpiar_texto(texto):
         return ""
 
     texto = str(texto)
-
     texto = unicodedata.normalize("NFKC", texto)
 
     reemplazos = {
@@ -35,46 +35,21 @@ def limpiar_texto(texto):
     for antiguo, nuevo in reemplazos.items():
         texto = texto.replace(antiguo, nuevo)
 
-    texto = texto.encode("latin-1", "replace").decode("latin-1")
-
-    return texto
+    return texto.encode("latin-1", "replace").decode("latin-1")
 
 
 def nombre_seguro(nombre):
     nombre = limpiar_texto(nombre)
-
-    nombre = re.sub(
-        r"[^A-Za-z0-9_-]+",
-        "_",
-        nombre
-    )
-
+    nombre = re.sub(r"[^A-Za-z0-9_-]+", "_", nombre)
     nombre = nombre.strip("_")
-
-    if not nombre:
-        nombre = "alumno"
-
-    return nombre[:60]
+    return (nombre or "alumno")[:60]
 
 
-def escribir_bloque(pdf, titulo, contenido, alto=6):
-    pdf.set_font("Arial", "B", 11)
-
-    pdf.multi_cell(
-        0,
-        alto,
-        limpiar_texto(titulo)
-    )
-
-    pdf.set_font("Arial", "", 10)
-
-    pdf.multi_cell(
-        0,
-        alto,
-        limpiar_texto(contenido)
-    )
-
-    pdf.ln(2)
+def _numero(valor):
+    try:
+        return float(valor)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def generar_pdf(
@@ -86,291 +61,185 @@ def generar_pdf(
     descuento_ortografia=0,
     nota_inicial=0,
     nota_final=0,
-    **kwargs
+    **kwargs,
 ):
     """
-    Genera el informe PDF.
-
-    También acepta:
-    - grupo en lugar de curso
-    - scores en lugar de resultados
+    Genera un PDF plano, sin formularios ni campos editables.
+    Admite 'grupo' en lugar de 'curso' y 'scores' en lugar de 'resultados'
+    por compatibilidad con versiones anteriores.
     """
 
-    # Compatibilidad con grupo
     if curso is None:
         curso = kwargs.get("grupo", "")
 
-    # Compatibilidad con scores
     if resultados is None:
         resultados = kwargs.get("scores", {})
 
     if not isinstance(resultados, dict):
         resultados = {}
 
-    if respuestas is None:
+    if respuestas is None or not isinstance(respuestas, dict):
         respuestas = {}
 
-    if nombre is None:
-        nombre = "Alumno"
+    nombre = nombre or "Alumno"
+    curso = curso or ""
 
-    if curso is None:
-        curso = ""
-
-    # ======================================================
-    # CREAR PDF
-    # ======================================================
-
-    pdf = FPDF(
-        orientation="P",
-        unit="mm",
-        format="A4"
-    )
-
+    pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.set_margins(15, 15, 15)
-
-    pdf.set_auto_page_break(
-        auto=True,
-        margin=15
-    )
-
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
-    # ======================================================
-    # CABECERA
-    # ======================================================
-
+    # Cabecera
     pdf.set_font("Arial", "B", 16)
-
     pdf.cell(
         0,
         10,
-        limpiar_texto(
-            "EVALUACION INICIAL DE LENGUA CASTELLANA"
-        ),
+        limpiar_texto("EVALUACION INICIAL DE LENGUA CASTELLANA"),
         ln=True,
-        align="C"
+        align="C",
     )
 
     pdf.set_font("Arial", "", 11)
-
     pdf.cell(
         0,
         7,
-        limpiar_texto(
-            "2.º ESO - Curso 2026-2027"
-        ),
+        limpiar_texto("2.º ESO - Curso 2026-2027"),
         ln=True,
-        align="C"
+        align="C",
     )
 
     pdf.ln(5)
 
-    # ======================================================
-    # DATOS DEL ALUMNO
-    # ======================================================
+    # Datos
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(35, 7, "Alumno:")
+    pdf.set_font("Arial", "", 11)
+    pdf.cell(0, 7, limpiar_texto(nombre), ln=True)
 
-    escribir_bloque(
-        pdf,
-        "Alumno",
-        nombre
-    )
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(35, 7, "Grupo:")
+    pdf.set_font("Arial", "", 11)
+    pdf.cell(0, 7, limpiar_texto(curso), ln=True)
 
-    escribir_bloque(
-        pdf,
-        "Grupo",
-        curso
-    )
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(35, 7, "Fecha:")
+    pdf.set_font("Arial", "", 11)
+    pdf.cell(0, 7, datetime.now().strftime("%d/%m/%Y %H:%M"), ln=True)
 
-    # ======================================================
-    # RESULTADOS
-    # ======================================================
+    pdf.ln(5)
 
+    # Resultados
     pdf.set_font("Arial", "B", 13)
-
-    pdf.cell(
-        0,
-        8,
-        limpiar_texto(
-            "RESULTADOS POR COMPETENCIA"
-        ),
-        ln=True
-    )
-
+    pdf.cell(0, 8, "RESULTADOS POR APARTADO", ln=True)
     pdf.ln(2)
 
     nombres = {
         "comprension": "Comprension lectora",
         "morfologia": "Morfologia",
+        "determinantes": "Determinantes y pronombres",
         "semantica": "Semantica",
+        "textos": "Textos",
         "literatura": "Literatura",
         "sintaxis": "Sintaxis",
+        "dialogo": "Dialogo",
     }
 
-    for clave, nombre_comp in nombres.items():
-
-        valor = resultados.get(clave, 0)
-
-        try:
-            valor = float(valor)
-        except (TypeError, ValueError):
-            valor = 0
-
+    for clave, etiqueta in nombres.items():
+        valor = _numero(resultados.get(clave, 0))
         pdf.set_font("Arial", "", 10)
-
         pdf.cell(
             0,
             7,
-            limpiar_texto(
-                f"{nombre_comp}: {valor:.2f}/10"
-            ),
-            ln=True
+            limpiar_texto(f"{etiqueta}: {valor:.2f} puntos"),
+            ln=True,
         )
 
-    # ======================================================
-    # NOTAS
-    # ======================================================
+    pdf.ln(3)
 
-    try:
-        nota_inicial_num = float(nota_inicial)
-    except (TypeError, ValueError):
-        nota_inicial_num = 0
+    nota_inicial_num = _numero(nota_inicial)
+    descuento_num = _numero(descuento_ortografia)
+    nota_final_num = _numero(nota_final)
 
-    try:
-        descuento_num = float(descuento_ortografia)
-    except (TypeError, ValueError):
-        descuento_num = 0
-
-    try:
-        nota_final_num = float(nota_final)
-    except (TypeError, ValueError):
-        nota_final_num = 0
-
-    pdf.ln(4)
-
-    pdf.set_font("Arial", "B", 13)
-
+    pdf.set_font("Arial", "B", 12)
     pdf.cell(
         0,
-        9,
-        limpiar_texto(
-            f"Nota inicial: {nota_inicial_num:.2f}/10"
-        ),
-        ln=True
+        8,
+        limpiar_texto(f"Nota inicial: {nota_inicial_num:.2f}/10"),
+        ln=True,
     )
 
     pdf.cell(
         0,
-        9,
-        limpiar_texto(
-            f"Descuento de ortografia: -{descuento_num:.2f} puntos"
-        ),
-        ln=True
+        8,
+        limpiar_texto(f"Descuento de ortografia: -{descuento_num:.2f}"),
+        ln=True,
     )
 
     pdf.cell(
         0,
-        9,
-        limpiar_texto(
-            f"Nota final: {nota_final_num:.2f}/10"
-        ),
-        ln=True
+        8,
+        limpiar_texto(f"Nota final: {nota_final_num:.2f}/10"),
+        ln=True,
     )
-
-    # ======================================================
-    # ORTOGRAFIA
-    # ======================================================
 
     try:
         faltas_num = int(faltas_ortografia)
     except (TypeError, ValueError):
         faltas_num = 0
 
-    pdf.ln(3)
-
-    escribir_bloque(
-        pdf,
-        "Correccion ortografica",
-        (
-            f"Faltas detectadas: {faltas_num}\n"
-            f"Descuento aplicado: -{descuento_num:.2f} puntos"
-        )
+    pdf.ln(2)
+    pdf.set_font("Arial", "", 9)
+    pdf.multi_cell(
+        0,
+        5,
+        limpiar_texto(
+            f"Faltas de ortografia detectadas automaticamente: {faltas_num}. "
+            "La revision automatica es orientativa."
+        ),
     )
 
-    # ======================================================
-    # RESPUESTAS
-    # ======================================================
-
+    # Respuestas
     if respuestas:
-
         pdf.add_page()
-
         pdf.set_font("Arial", "B", 13)
-
-        pdf.cell(
-            0,
-            8,
-            limpiar_texto(
-                "RESPUESTAS DEL ALUMNO"
-            ),
-            ln=True
-        )
-
+        pdf.cell(0, 8, "RESPUESTAS DEL ALUMNO", ln=True)
         pdf.ln(3)
 
         for pregunta, respuesta in respuestas.items():
-
             pdf.set_font("Arial", "B", 9)
-
-            pdf.multi_cell(
-                0,
-                5,
-                limpiar_texto(
-                    str(pregunta)
-                )
-            )
+            pdf.multi_cell(0, 5, limpiar_texto(str(pregunta)))
 
             pdf.set_font("Arial", "", 9)
 
             if isinstance(respuesta, dict):
-
-                partes = []
-
-                for clave, valor in respuesta.items():
-                    partes.append(
-                        f"{clave}: {valor}"
-                    )
-
+                partes = [
+                    f"{clave}: {valor}"
+                    for clave, valor in respuesta.items()
+                ]
                 texto_respuesta = "\n".join(partes)
-
             else:
-                texto_respuesta = str(respuesta)
+                texto_respuesta = str(respuesta or "")
 
-            if len(texto_respuesta) > 1000:
-                texto_respuesta = (
-                    texto_respuesta[:1000]
-                    + "..."
-                )
+            if len(texto_respuesta) > 2000:
+                texto_respuesta = texto_respuesta[:2000] + "..."
 
-            pdf.multi_cell(
-                0,
-                5,
-                limpiar_texto(
-                    texto_respuesta
-                )
-            )
-
+            pdf.multi_cell(0, 5, limpiar_texto(texto_respuesta))
             pdf.ln(2)
 
-    # ======================================================
-    # GUARDAR PDF
-    # ======================================================
+    # Aviso de documento de entrega
+    pdf.ln(4)
+    pdf.set_font("Arial", "I", 8)
+    pdf.multi_cell(
+        0,
+        4,
+        limpiar_texto(
+            "Documento generado automaticamente por la aplicacion. "
+            "No contiene campos de formulario editables."
+        ),
+    )
 
     carpeta = "pdf_resultados"
-
-    os.makedirs(
-        carpeta,
-        exist_ok=True
-    )
+    os.makedirs(carpeta, exist_ok=True)
 
     nombre_archivo = (
         "resultado_"
@@ -381,12 +250,8 @@ def generar_pdf(
     )
 
     ruta = os.path.abspath(
-        os.path.join(
-            carpeta,
-            nombre_archivo
-        )
+        os.path.join(carpeta, nombre_archivo)
     )
 
     pdf.output(ruta)
-
     return ruta
