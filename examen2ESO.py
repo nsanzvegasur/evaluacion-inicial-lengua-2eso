@@ -1,5 +1,9 @@
 EXAMEN = {
     "2ESO": {
+
+        # ==========================================================
+        # 1. COMPRENSIÓN LECTORA
+        # ==========================================================
         "comprension": {
             "texto": """El tren de madrugada recorría lentamente la línea hacia la ciudad. La niebla cubría los campos y apenas dejaba ver el paisaje. En cada estación, el convoy se detenía unos segundos y volvía a avanzar con un chirrido metálico.
 
@@ -14,15 +18,25 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                     "ayuda": "Indica dónde ocurre la historia.",
                     "tipo": "texto",
                     "puntos": 0.30,
-                    "criterios": ["tren", "vagón", "estaciones", "ciudad"]
+                    "criterios": [
+                        "tren",
+                        "vagón",
+                        "vagones",
+                        "estación",
+                        "estaciones",
+                        "ciudad"
+                    ]
                 },
                 {
                     "id": "c1_personajes",
                     "enunciado": "1.1. Personajes",
-                    "ayuda": "Escribe los dos personajes que aparecen. Sepáralos con una coma o escribe uno en cada línea.",
+                    "ayuda": "Escribe los dos personajes que aparecen. Sepáralos por comas o escribe uno en cada línea.",
                     "tipo": "lista",
                     "puntos": 0.40,
-                    "criterios": ["hombre joven", "anciana"]
+                    "criterios": [
+                        "hombre joven",
+                        "anciana"
+                    ]
                 },
                 {
                     "id": "c1_tiempo",
@@ -30,15 +44,17 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                     "ayuda": "Indica cuándo ocurre la historia.",
                     "tipo": "texto",
                     "puntos": 0.30,
-                    "criterios": ["madrugada", "amanecer"]
+                    "criterios": [
+                        "madrugada",
+                        "amanecer"
+                    ]
                 },
-
                 {
                     "id": "c2_accion1",
                     "enunciado": "1.2. Acción 1",
                     "ayuda": "Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
                     "tipo": "accion",
-                    "puntos": 0.333,
+                    "puntos": 0.50,
                     "criterios": [
                         "recorrer",
                         "detenerse",
@@ -57,7 +73,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                     "enunciado": "1.2. Acción 2",
                     "ayuda": "Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
                     "tipo": "accion",
-                    "puntos": 0.333,
+                    "puntos": 0.50,
                     "criterios": [
                         "recorrer",
                         "detenerse",
@@ -76,7 +92,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                     "enunciado": "1.2. Acción 3",
                     "ayuda": "Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
                     "tipo": "accion",
-                    "puntos": 0.334,
+                    "puntos": 0.50,
                     "criterios": [
                         "recorrer",
                         "detenerse",
@@ -93,6 +109,9 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             ]
         },
 
+        # ==========================================================
+        # 2. MORFOLOGÍA
+        # ==========================================================
         "morfologia": [
             {
                 "id": "m1",
@@ -192,6 +211,9 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             }
         ],
 
+        # ==========================================================
+        # 3. DETERMINANTES Y PRONOMBRES
+        # ==========================================================
         "determinantes_pronombres": [
             {
                 "id": "dp1",
@@ -219,6 +241,9 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             }
         ],
 
+        # ==========================================================
+        # 4. SEMÁNTICA
+        # ==========================================================
         "semantica": [
             {
                 "id": "s1",
@@ -257,6 +282,9 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             }
         ],
 
+        # ==========================================================
+        # 5. TIPOLOGÍA TEXTUAL
+        # ==========================================================
         "textos": [
             {
                 "id": "t1",
@@ -281,6 +309,9 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             }
         ],
 
+        # ==========================================================
+        # 6. LITERATURA
+        # ==========================================================
         "literatura": [
             {
                 "id": "l0",
@@ -325,7 +356,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             {
                 "id": "l5",
                 "enunciado": "5.5. Localiza una sinalefa del poema y escribe las dos palabras exactas que la forman.",
-                "ayuda": "Escribe únicamente las dos palabras que forman la sinalefa.",
+                "ayuda": "Escribe únicamente las dos palabras que forman la sinalefa. No tienes que explicar nada.",
                 "tipo": "sinalefa",
                 "respuestas_validas": [
                     "suave en",
@@ -338,7 +369,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             {
                 "id": "l6",
                 "enunciado": "5.6. Localiza una personificación del poema y escribe las palabras exactas que la forman.",
-                "ayuda": "Escribe únicamente las palabras que forman la personificación.",
+                "ayuda": "Escribe únicamente las palabras que forman la personificación. No tienes que explicar nada.",
                 "tipo": "personificacion",
                 "respuestas_validas": [
                     "el viento juega",
@@ -348,6 +379,9 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             }
         ],
 
+        # ==========================================================
+        # 7. SINTAXIS
+        # ==========================================================
         "sintaxis": [
             {
                 "id": "x1",
@@ -421,6 +455,9 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             }
         ],
 
+        # ==========================================================
+        # 8. DIÁLOGO
+        # ==========================================================
         "dialogo": {
             "texto": """Lucía: ¿Has terminado el resumen de Lengua?
 Carlos: Sí, lo hice ayer por la tarde.
@@ -433,10 +470,13 @@ Carlos: Perfecto, allí estaremos más tranquilos.""",
                 {
                     "id": "d1",
                     "enunciado": "7.1. ¿Quiénes son los interlocutores?",
-                    "ayuda": "Escribe los dos nombres, separados por una coma, por «y» o en líneas diferentes.",
+                    "ayuda": "Escribe los dos nombres. Sepáralos por comas o escribe uno en cada línea.",
                     "respuesta": "Lucía y Carlos",
                     "tipo": "lista",
-                    "criterios": ["lucía", "carlos"],
+                    "criterios": [
+                        "lucía",
+                        "carlos"
+                    ],
                     "puntos": 0.15
                 },
                 {
