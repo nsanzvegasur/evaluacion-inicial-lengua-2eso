@@ -1,9 +1,14 @@
+```python
 import os
 import re
 import unicodedata
 
 from fpdf import FPDF
 
+
+# ==========================================================
+# LIMPIEZA DE TEXTO
+# ==========================================================
 
 def limpiar_texto(texto):
     """
@@ -37,7 +42,7 @@ def limpiar_texto(texto):
         "✔": "OK",
         "€": "EUR",
         "º": "o",
-        "ª": "a"
+        "ª": "a",
     }
 
     for antiguo, nuevo in reemplazos.items():
@@ -46,17 +51,22 @@ def limpiar_texto(texto):
             nuevo
         )
 
-    texto = texto.encode(
-        "latin-1",
-        "replace"
-    ).decode(
-        "latin-1"
+    # FPDF con Arial utiliza latin-1.
+    texto = (
+        texto
+        .encode("latin-1", "replace")
+        .decode("latin-1")
     )
 
     return texto
 
 
+# ==========================================================
+# NOMBRE SEGURO PARA EL ARCHIVO
+# ==========================================================
+
 def nombre_seguro(nombre):
+
     nombre = limpiar_texto(nombre)
 
     nombre = re.sub(
@@ -73,12 +83,17 @@ def nombre_seguro(nombre):
     return nombre[:60]
 
 
+# ==========================================================
+# ESCRIBIR BLOQUES
+# ==========================================================
+
 def escribir_bloque(
     pdf,
     titulo,
     contenido,
     alto=6
 ):
+
     pdf.set_font(
         "Arial",
         "B",
@@ -106,16 +121,74 @@ def escribir_bloque(
     pdf.ln(2)
 
 
+# ==========================================================
+# GENERADOR DEL PDF
+# ==========================================================
+
 def generar_pdf(
-    nombre,
-    curso,
-    resultados,
+    nombre=None,
+    curso=None,
+    resultados=None,
     respuestas=None,
     faltas_ortografia=0,
     descuento_ortografia=0,
     nota_inicial=0,
-    nota_final=0
+    nota_final=0,
+    **kwargs
 ):
+    """
+    Genera el informe PDF del alumno.
+
+    Compatible con las distintas versiones de app.py:
+    - nombre
+    - curso / grupo
+    - resultados / scores
+    - respuestas
+    - faltas_ortografia
+    - descuento_ortografia
+    - nota_inicial
+    - nota_final
+    """
+
+    # ------------------------------------------------------
+    # COMPATIBILIDAD CON "grupo"
+    # ------------------------------------------------------
+
+    if curso is None:
+        curso = kwargs.get(
+            "grupo",
+            ""
+        )
+
+    # ------------------------------------------------------
+    # COMPATIBILIDAD CON "scores"
+    # ------------------------------------------------------
+
+    if resultados is None:
+        resultados = kwargs.get(
+            "scores",
+            {}
+        )
+
+    # Evitar errores si no llegan resultados
+    if not isinstance(resultados, dict):
+        resultados = {}
+
+    # Evitar errores con respuestas
+    if respuestas is None:
+        respuestas = {}
+
+    # Evitar valores None
+    if nombre is None:
+        nombre = "Alumno"
+
+    if curso is None:
+        curso = ""
+
+    # ======================================================
+    # CREAR PDF
+    # ======================================================
+
     pdf = FPDF(
         orientation="P",
         unit="mm",
@@ -135,9 +208,9 @@ def generar_pdf(
 
     pdf.add_page()
 
-    # ==========================================================
+    # ======================================================
     # CABECERA
-    # ==========================================================
+    # ======================================================
 
     pdf.set_font(
         "Arial",
@@ -149,7 +222,7 @@ def generar_pdf(
         0,
         10,
         limpiar_texto(
-            "Evaluación inicial de Lengua Castellana"
+            "EVALUACION INICIAL DE LENGUA CASTELLANA"
         ),
         ln=True,
         align="C"
@@ -165,13 +238,17 @@ def generar_pdf(
         0,
         7,
         limpiar_texto(
-            "2.º ESO"
+            "2.º ESO - Curso 2026-2027"
         ),
         ln=True,
         align="C"
     )
 
     pdf.ln(5)
+
+    # ======================================================
+    # DATOS DEL ALUMNO
+    # ======================================================
 
     escribir_bloque(
         pdf,
@@ -181,13 +258,13 @@ def generar_pdf(
 
     escribir_bloque(
         pdf,
-        "Curso",
+        "Grupo",
         curso
     )
 
-    # ==========================================================
-    # RESULTADOS
-    # ==========================================================
+    # ======================================================
+    # RESULTADOS POR COMPETENCIA
+    # ======================================================
 
     pdf.set_font(
         "Arial",
@@ -198,18 +275,20 @@ def generar_pdf(
     pdf.cell(
         0,
         8,
-        "Resultados",
+        limpiar_texto(
+            "RESULTADOS POR COMPETENCIA"
+        ),
         ln=True
     )
 
     pdf.ln(2)
 
     nombres = {
-        "comprension": "Comprension",
+        "comprension": "Comprension lectora",
         "morfologia": "Morfologia",
         "semantica": "Semantica",
         "literatura": "Literatura",
-        "sintaxis": "Sintaxis"
+        "sintaxis": "Sintaxis",
     }
 
     for clave, nombre_comp in nombres.items():
@@ -221,13 +300,11 @@ def generar_pdf(
 
         try:
             valor = float(valor)
-        except (TypeError, ValueError):
+        except (
+            TypeError,
+            ValueError
+        ):
             valor = 0
-
-        texto = (
-            f"{nombre_comp}: "
-            f"{valor:.2f}/10"
-        )
 
         pdf.set_font(
             "Arial",
@@ -238,27 +315,59 @@ def generar_pdf(
         pdf.cell(
             0,
             7,
-            limpiar_texto(texto),
+            limpiar_texto(
+                f"{nombre_comp}: {valor:.2f}/10"
+            ),
             ln=True
         )
 
-    pdf.ln(3)
-
-    # ==========================================================
+    # ======================================================
     # NOTA
-    # ==========================================================
+    # ======================================================
+
+    pdf.ln(4)
+
+    try:
+        nota_inicial_num = float(
+            nota_inicial
+        )
+    except (
+        TypeError,
+        ValueError
+    ):
+        nota_inicial_num = 0
+
+    try:
+        descuento_num = float(
+            descuento_ortografia
+        )
+    except (
+        TypeError,
+        ValueError
+    ):
+        descuento_num = 0
+
+    try:
+        nota_final_num = float(
+            nota_final
+        )
+    except (
+        TypeError,
+        ValueError
+    ):
+        nota_final_num = 0
 
     pdf.set_font(
         "Arial",
         "B",
-        14
+        13
     )
 
     pdf.cell(
         0,
         9,
         limpiar_texto(
-            f"Nota inicial: {float(nota_inicial):.2f}/10"
+            f"Nota inicial: {nota_inicial_num:.2f}/10"
         ),
         ln=True
     )
@@ -267,7 +376,7 @@ def generar_pdf(
         0,
         9,
         limpiar_texto(
-            f"Descuento de ortografia: -{float(descuento_ortografia):.2f}"
+            f"Descuento de ortografia: -{descuento_num:.2f} puntos"
         ),
         ln=True
     )
@@ -276,32 +385,43 @@ def generar_pdf(
         0,
         9,
         limpiar_texto(
-            f"Nota final: {float(nota_final):.2f}/10"
+            f"Nota final: {nota_final_num:.2f}/10"
         ),
         ln=True
     )
+
+    # ======================================================
+    # ORTOGRAFIA
+    # ======================================================
 
     pdf.ln(3)
 
-    # ==========================================================
-    # ORTOGRAFÍA
-    # ==========================================================
+    try:
+        faltas_num = int(
+            faltas_ortografia
+        )
+    except (
+        TypeError,
+        ValueError
+    ):
+        faltas_num = 0
 
     escribir_bloque(
         pdf,
         "Correccion ortografica",
         (
-            f"Faltas detectadas: {faltas_ortografia}\n"
+            f"Faltas detectadas: {faltas_num}\n"
             f"Descuento aplicado: "
-            f"-{float(descuento_ortografia):.2f} puntos"
+            f"-{descuento_num:.2f} puntos"
         )
     )
 
-    # ==========================================================
-    # RESPUESTAS
-    # ==========================================================
+    # ======================================================
+    # RESPUESTAS DEL ALUMNO
+    # ======================================================
 
     if respuestas:
+
         pdf.add_page()
 
         pdf.set_font(
@@ -313,11 +433,16 @@ def generar_pdf(
         pdf.cell(
             0,
             8,
-            "Respuestas del alumno",
+            limpiar_texto(
+                "RESPUESTAS DEL ALUMNO"
+            ),
             ln=True
         )
 
         pdf.ln(3)
+
+        # Si por algún motivo llegan respuestas
+        # anidadas, también las convertimos en texto.
 
         for pregunta, respuesta in respuestas.items():
 
@@ -341,13 +466,30 @@ def generar_pdf(
                 9
             )
 
-            texto_respuesta = str(
-                respuesta
-            )
+            if isinstance(
+                respuesta,
+                dict
+            ):
+                partes = []
 
-            if len(texto_respuesta) > 500:
+                for clave, valor in respuesta.items():
+                    partes.append(
+                        f"{clave}: {valor}"
+                    )
+
+                texto_respuesta = "\n".join(
+                    partes
+                )
+
+            else:
+                texto_respuesta = str(
+                    respuesta
+                )
+
+            # Evitar respuestas gigantes
+            if len(texto_respuesta) > 1000:
                 texto_respuesta = (
-                    texto_respuesta[:500]
+                    texto_respuesta[:1000]
                     + "..."
                 )
 
@@ -361,9 +503,9 @@ def generar_pdf(
 
             pdf.ln(2)
 
-    # ==========================================================
+    # ======================================================
     # GUARDAR
-    # ==========================================================
+    # ======================================================
 
     carpeta = "pdf_resultados"
 
@@ -373,9 +515,11 @@ def generar_pdf(
     )
 
     nombre_archivo = (
-        f"resultado_"
-        f"{nombre_seguro(nombre)}_"
-        f"{nombre_seguro(curso)}.pdf"
+        "resultado_"
+        + nombre_seguro(nombre)
+        + "_"
+        + nombre_seguro(curso)
+        + ".pdf"
     )
 
     ruta = os.path.abspath(
@@ -388,3 +532,4 @@ def generar_pdf(
     pdf.output(ruta)
 
     return ruta
+```
