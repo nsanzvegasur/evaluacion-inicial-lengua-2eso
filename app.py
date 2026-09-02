@@ -1154,20 +1154,6 @@ with st.expander("📊 Estadísticas del grupo"):
         )
 
         # -----------------------------------------------------
-        # IMPORTANTE:
-        # Se crea una copia ANÓNIMA de los resultados.
-        # Los nombres reales nunca se muestran al alumnado.
-        # -----------------------------------------------------
-        df_anon = df.copy()
-
-        # Se asigna un identificador anónimo a cada registro.
-        # Ejemplo: Alumno 1, Alumno 2, Alumno 3...
-        df_anon["name"] = [
-            f"Alumno {i + 1}"
-            for i in range(len(df_anon))
-        ]
-
-        # -----------------------------------------------------
         # MEDIA DE LA CLASE
         # -----------------------------------------------------
         medias = {
@@ -1179,6 +1165,8 @@ with st.expander("📊 Estadísticas del grupo"):
             if c in df.columns
         }
 
+        st.subheader("Media de la clase")
+
         st.dataframe(
             pd.DataFrame(
                 [medias]
@@ -1189,37 +1177,54 @@ with st.expander("📊 Estadísticas del grupo"):
         )
 
         # -----------------------------------------------------
-        # SELECTOR ANÓNIMO
+        # COMPARATIVA SOLO DEL ALUMNO QUE ACABA DE REALIZAR
+        # EL EXAMEN
+        #
+        # No se muestra ningún nombre de otro alumno.
+        # No existe selector de compañeros.
         # -----------------------------------------------------
-        alumnos_anonimos = df_anon["name"].tolist()
+        if enviar and nombre.strip():
 
-        alumno_anonimo = st.selectbox(
-            "Selecciona un alumno para comparar",
-            alumnos_anonimos
-        )
+            # Buscamos únicamente el resultado que acaba
+            # de guardar este alumno.
+            resultados_mismo_alumno = df[
+                df["name"].astype(str).str.strip()
+                == nombre.strip()
+            ]
 
-        # -----------------------------------------------------
-        # OBTENER LA FILA CORRESPONDIENTE
-        # SIN MOSTRAR NUNCA EL NOMBRE REAL
-        # -----------------------------------------------------
-        fila_alumno = df_anon[
-            df_anon["name"] == alumno_anonimo
-        ].iloc[-1]
+            if not resultados_mismo_alumno.empty:
 
-        # -----------------------------------------------------
-        # COMPARATIVA
-        # La función recibe únicamente el dataframe anonimizado.
-        # Por tanto, tampoco puede mostrar nombres reales.
-        # -----------------------------------------------------
-        figura = comparativa(
-            fila_alumno,
-            df_anon
-        )
+                fila_alumno = resultados_mismo_alumno.iloc[-1]
 
-        if figura is not None:
+                # Creamos una copia exclusivamente para la
+                # comparativa y eliminamos cualquier nombre real.
+                df_comparativa = df.copy()
 
-            st.plotly_chart(
-                figura,
-                use_container_width=True
+                df_comparativa["name"] = "Alumno"
+
+                # La fila del alumno también queda anonimizada.
+                fila_alumno_anonima = fila_alumno.copy()
+                fila_alumno_anonima["name"] = "Tu resultado"
+
+                figura = comparativa(
+                    fila_alumno_anonima,
+                    df_comparativa
+                )
+
+                if figura is not None:
+
+                    st.subheader(
+                        "Tu resultado frente a la media de la clase"
+                    )
+
+                    st.plotly_chart(
+                        figura,
+                        use_container_width=True
+                    )
+
+        else:
+
+            st.info(
+                "Realiza el examen para consultar tu comparativa "
+                "con la media de la clase."
             )
-```
