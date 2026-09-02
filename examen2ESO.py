@@ -1,12 +1,6 @@
 EXAMEN = {
     "2ESO": {
-
-        # =========================================================
-        # 1. COMPRENSIÓN LECTORA
-        # =========================================================
-
         "comprension": {
-
             "texto": """El tren de madrugada recorría lentamente la línea hacia la ciudad. La niebla cubría los campos y apenas dejaba ver el paisaje. En cada estación, el convoy se detenía unos segundos y volvía a avanzar con un chirrido metálico.
 
 En uno de los vagones, un hombre joven miraba por la ventana sin hablar. Sujetaba una mochila y parecía cansado. A su lado, una anciana dormía profundamente. El silencio dentro del vagón era extraño, como si todos evitaran mirarse.
@@ -14,49 +8,34 @@ En uno de los vagones, un hombre joven miraba por la ventana sin hablar. Sujetab
 Cuando el tren llegó a la estación final, la luz del amanecer comenzó a aparecer entre los edificios. El viajero bajó lentamente, respiró hondo y caminó sin prisa hacia la salida.""",
 
             "preguntas": [
-
                 {
                     "id": "c1_lugar",
                     "enunciado": "1.1. Lugar",
-                    "ayuda": "Indica dónde ocurre la historia. Puedes mencionar el tren, el vagón, las estaciones o la ciudad.",
+                    "ayuda": "Indica dónde ocurre la historia.",
                     "tipo": "texto",
                     "puntos": 0.30,
-                    "criterios": [
-                        "tren",
-                        "vagón",
-                        "estación",
-                        "ciudad"
-                    ]
+                    "criterios": ["tren", "vagón", "estaciones", "ciudad"]
                 },
-
                 {
                     "id": "c1_personajes",
                     "enunciado": "1.1. Personajes",
-                    "ayuda": "Escribe los personajes que aparecen. Si escribes varios, sepáralos con comas.",
-                    "tipo": "personajes",
-                    "puntos": 0.35,
-                    "criterios": [
-                        "hombre joven",
-                        "viajero",
-                        "anciana"
-                    ]
+                    "ayuda": "Escribe los dos personajes que aparecen. Sepáralos con una coma o escribe uno en cada línea.",
+                    "tipo": "lista",
+                    "puntos": 0.40,
+                    "criterios": ["hombre joven", "anciana"]
                 },
-
                 {
                     "id": "c1_tiempo",
                     "enunciado": "1.1. Tiempo",
                     "ayuda": "Indica cuándo ocurre la historia.",
                     "tipo": "texto",
-                    "puntos": 0.35,
-                    "criterios": [
-                        "madrugada",
-                        "amanecer"
-                    ]
+                    "puntos": 0.30,
+                    "criterios": ["madrugada", "amanecer"]
                 },
 
                 {
                     "id": "c2_accion1",
-                    "enunciado": "1.2. Primera acción",
+                    "enunciado": "1.2. Acción 1",
                     "ayuda": "Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
                     "tipo": "accion",
                     "puntos": 0.333,
@@ -73,11 +52,10 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                         "caminar"
                     ]
                 },
-
                 {
                     "id": "c2_accion2",
-                    "enunciado": "1.2. Segunda acción",
-                    "ayuda": "Localiza otra acción que ocurra en el texto y escríbela en infinitivo.",
+                    "enunciado": "1.2. Acción 2",
+                    "ayuda": "Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
                     "tipo": "accion",
                     "puntos": 0.333,
                     "criterios": [
@@ -93,11 +71,10 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                         "caminar"
                     ]
                 },
-
                 {
                     "id": "c2_accion3",
-                    "enunciado": "1.2. Tercera acción",
-                    "ayuda": "Localiza otra acción que ocurra en el texto y escríbela en infinitivo.",
+                    "enunciado": "1.2. Acción 3",
+                    "ayuda": "Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
                     "tipo": "accion",
                     "puntos": 0.334,
                     "criterios": [
@@ -116,12 +93,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             ]
         },
 
-        # =========================================================
-        # 2. MORFOLOGÍA
-        # =========================================================
-
         "morfologia": [
-
             {
                 "id": "m1",
                 "palabra": "silencio",
@@ -129,14 +101,14 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "campos": [
                     "Lexema",
                     "Morfemas",
-                    "Tipo de estructura",
+                    "Estructura de la palabra",
                     "Categoría gramatical completa",
                     "V / I"
                 ],
                 "respuestas": {
                     "Lexema": ["silenci"],
                     "Morfemas": ["o"],
-                    "Tipo de estructura": ["simple"],
+                    "Estructura de la palabra": ["simple"],
                     "Categoría gramatical completa": [
                         "sustantivo",
                         "común",
@@ -144,10 +116,9 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                         "masculino",
                         "singular"
                     ],
-                    "V / I": ["V"]
+                    "V / I": ["variable"]
                 }
             },
-
             {
                 "id": "m2",
                 "palabra": "lentamente",
@@ -155,22 +126,21 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "campos": [
                     "Lexema",
                     "Morfemas",
-                    "Tipo de estructura",
+                    "Estructura de la palabra",
                     "Categoría gramatical completa",
                     "V / I"
                 ],
                 "respuestas": {
                     "Lexema": ["lent"],
                     "Morfemas": ["a", "mente"],
-                    "Tipo de estructura": ["derivada"],
+                    "Estructura de la palabra": ["derivada"],
                     "Categoría gramatical completa": [
                         "adverbio",
                         "modo"
                     ],
-                    "V / I": ["I"]
+                    "V / I": ["invariable"]
                 }
             },
-
             {
                 "id": "m3",
                 "palabra": "desconocido",
@@ -178,24 +148,23 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "campos": [
                     "Lexema",
                     "Morfemas",
-                    "Tipo de estructura",
+                    "Estructura de la palabra",
                     "Categoría gramatical completa",
                     "V / I"
                 ],
                 "respuestas": {
                     "Lexema": ["conoc"],
                     "Morfemas": ["des", "id", "o"],
-                    "Tipo de estructura": ["derivada"],
+                    "Estructura de la palabra": ["derivada"],
                     "Categoría gramatical completa": [
                         "adjetivo",
                         "calificativo",
                         "masculino",
                         "singular"
                     ],
-                    "V / I": ["I"]
+                    "V / I": ["variable"]
                 }
             },
-
             {
                 "id": "m4",
                 "palabra": "mochilas",
@@ -203,14 +172,14 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "campos": [
                     "Lexema",
                     "Morfemas",
-                    "Tipo de estructura",
+                    "Estructura de la palabra",
                     "Categoría gramatical completa",
                     "V / I"
                 ],
                 "respuestas": {
                     "Lexema": ["mochil"],
                     "Morfemas": ["a", "s"],
-                    "Tipo de estructura": ["simple"],
+                    "Estructura de la palabra": ["simple"],
                     "Categoría gramatical completa": [
                         "sustantivo",
                         "común",
@@ -218,17 +187,12 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                         "femenino",
                         "plural"
                     ],
-                    "V / I": ["V"]
+                    "V / I": ["variable"]
                 }
             }
         ],
 
-        # =========================================================
-        # 2.2. DETERMINANTES Y PRONOMBRES
-        # =========================================================
-
         "determinantes_pronombres": [
-
             {
                 "id": "dp1",
                 "frase": "Aquellos estudiantes llegaron tarde.",
@@ -237,7 +201,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "determinante",
                 "puntos": 0.1667
             },
-
             {
                 "id": "dp2",
                 "frase": "Mi cuaderno está en la mesa.",
@@ -246,7 +209,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "determinante",
                 "puntos": 0.1667
             },
-
             {
                 "id": "dp3",
                 "frase": "Nadie respondió a la pregunta.",
@@ -257,12 +219,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             }
         ],
 
-        # =========================================================
-        # 3. SEMÁNTICA
-        # =========================================================
-
         "semantica": [
-
             {
                 "id": "s1",
                 "elemento": "Frío / calor",
@@ -270,7 +227,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "antonimia",
                 "puntos": 0.10
             },
-
             {
                 "id": "s2",
                 "elemento": "Perro, gato, caballo",
@@ -278,7 +234,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "campo semántico",
                 "puntos": 0.10
             },
-
             {
                 "id": "s3",
                 "elemento": "Hoja (árbol / papel)",
@@ -286,7 +241,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "polisemia",
                 "puntos": 0.10
             },
-
             {
                 "id": "s4",
                 "elemento": "Rueda y volante respecto a coche",
@@ -294,7 +248,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "meronimia",
                 "puntos": 0.10
             },
-
             {
                 "id": "s5",
                 "elemento": "León, tigre, pantera",
@@ -304,12 +257,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             }
         ],
 
-        # =========================================================
-        # 4. TEXTOS
-        # =========================================================
-
         "textos": [
-
             {
                 "id": "t1",
                 "texto": "Texto A: «Apaga el horno y deja reposar la masa durante diez minutos antes de usarla.»",
@@ -317,7 +265,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "instructivo",
                 "puntos": 0.25
             },
-
             {
                 "id": "t2",
                 "texto": "Texto B: «Los mamíferos son animales vertebrados que alimentan a sus crías con leche.»",
@@ -325,7 +272,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "expositivo",
                 "puntos": 0.25
             },
-
             {
                 "id": "t3",
                 "texto": "Texto C: «Reciclar ayuda a reducir la contaminación y cuidar el medio ambiente.»",
@@ -335,12 +281,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             }
         ],
 
-        # =========================================================
-        # 5. LITERATURA
-        # =========================================================
-
         "literatura": [
-
             {
                 "id": "l0",
                 "tipo": "poema",
@@ -352,75 +293,62 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                     "como si todo fuera soledad."
                 ]
             },
-
             {
                 "id": "l1",
                 "enunciado": "5.1. Número de versos",
                 "respuesta": "4",
                 "puntos": 0.25
             },
-
             {
                 "id": "l2",
                 "enunciado": "5.2. ¿Es de arte mayor o de arte menor?",
                 "respuesta": "arte mayor",
                 "puntos": 0.25
             },
-
             {
                 "id": "l3",
                 "enunciado": "5.3. Esquema métrico",
-                "ayuda": "Escribe el esquema completo de los cuatro versos. Puedes separar los versos con espacios o con comas.",
                 "respuesta": "14A 14B 14B 14A",
                 "alternativas": [
                     "14A 14B 14B 14A",
                     "14A, 14B, 14B, 14A",
-                    "14A,14B,14B,14A"
+                    "14A/14B/14B/14A"
                 ],
                 "puntos": 0.35
             },
-
             {
                 "id": "l4",
                 "enunciado": "5.4. Tipo de rima",
                 "respuesta": "consonante",
                 "puntos": 0.25
             },
-
             {
                 "id": "l5",
-                "enunciado": "5.5. Localiza una sinalefa del poema y escribe únicamente las palabras que forman la sinalefa.",
-                "ayuda": "Escribe solo las dos palabras que forman la sinalefa. Ejemplo de formato: «lluvia cae». No es necesario explicar qué es una sinalefa.",
+                "enunciado": "5.5. Localiza una sinalefa del poema y escribe las dos palabras exactas que la forman.",
+                "ayuda": "Escribe únicamente las dos palabras que forman la sinalefa.",
                 "tipo": "sinalefa",
-                "puntos": 0.45,
                 "respuestas_validas": [
-                    "lluvia cae",
                     "suave en",
                     "y el",
-                    "si todo",
-                    "todo fuera"
-                ]
+                    "solo en",
+                    "la escuela"
+                ],
+                "puntos": 0.45
             },
-
             {
                 "id": "l6",
-                "enunciado": "5.6. Localiza una personificación del poema y escribe únicamente las palabras exactas que la forman.",
-                "ayuda": "Escribe solo las palabras exactas del poema. No es necesario explicar qué es una personificación.",
+                "enunciado": "5.6. Localiza una personificación del poema y escribe las palabras exactas que la forman.",
+                "ayuda": "Escribe únicamente las palabras que forman la personificación.",
                 "tipo": "personificacion",
-                "puntos": 0.45,
                 "respuestas_validas": [
                     "el viento juega",
                     "viento juega"
-                ]
+                ],
+                "puntos": 0.45
             }
         ],
 
-        # =========================================================
-        # 6. SINTAXIS
-        # =========================================================
-
         "sintaxis": [
-
             {
                 "id": "x1",
                 "frase": "Buenas tardes.",
@@ -428,7 +356,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "frase",
                 "puntos": 0.10
             },
-
             {
                 "id": "x2",
                 "frase": "Llueve mucho hoy.",
@@ -436,7 +363,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "oración",
                 "puntos": 0.10
             },
-
             {
                 "id": "x3",
                 "frase": "¡Qué alegría!",
@@ -444,7 +370,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "frase",
                 "puntos": 0.10
             },
-
             {
                 "id": "x4",
                 "frase": "No hablar en clase.",
@@ -452,7 +377,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "oración",
                 "puntos": 0.10
             },
-
             {
                 "id": "x5",
                 "frase": "El perro ladra.",
@@ -460,7 +384,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "oración",
                 "puntos": 0.10
             },
-
             {
                 "id": "x6",
                 "frase": "¿Vienes conmigo?",
@@ -468,7 +391,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "interrogativa",
                 "puntos": 0.10
             },
-
             {
                 "id": "x7",
                 "frase": "Ojalá apruebe el examen.",
@@ -476,7 +398,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "desiderativa",
                 "puntos": 0.10
             },
-
             {
                 "id": "x8",
                 "frase": "¡Qué frío hace!",
@@ -484,7 +405,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "exclamativa",
                 "puntos": 0.10
             },
-
             {
                 "id": "x9",
                 "frase": "Mañana iremos al cine.",
@@ -492,7 +412,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "respuesta": "enunciativa",
                 "puntos": 0.10
             },
-
             {
                 "id": "x10",
                 "frase": "Cierra la puerta.",
@@ -502,12 +421,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             }
         ],
 
-        # =========================================================
-        # 7. DIÁLOGO
-        # =========================================================
-
         "dialogo": {
-
             "texto": """Lucía: ¿Has terminado el resumen de Lengua?
 Carlos: Sí, lo hice ayer por la tarde.
 Lucía: Yo todavía estoy con la conclusión.
@@ -516,32 +430,26 @@ Lucía: Vale, quedamos en la biblioteca.
 Carlos: Perfecto, allí estaremos más tranquilos.""",
 
             "preguntas": [
-
                 {
                     "id": "d1",
                     "enunciado": "7.1. ¿Quiénes son los interlocutores?",
-                    "ayuda": "Escribe los DOS nombres de los interlocutores, separados por una coma. Ejemplo: Lucía, Carlos",
-                    "tipo": "interlocutores",
-                    "respuestas_validas": [
-                        "lucía",
-                        "carlos"
-                    ],
-                    "puntos": 0.10
+                    "ayuda": "Escribe los dos nombres, separados por una coma, por «y» o en líneas diferentes.",
+                    "respuesta": "Lucía y Carlos",
+                    "tipo": "lista",
+                    "criterios": ["lucía", "carlos"],
+                    "puntos": 0.15
                 },
-
                 {
                     "id": "d2",
                     "enunciado": "7.2. ¿Cuál es el número de intervenciones?",
                     "respuesta": "6",
-                    "puntos": 0.10
+                    "puntos": 0.15
                 },
-
                 {
                     "id": "d3",
                     "enunciado": "7.3. Pasa a estilo indirecto la intervención de Carlos: «Sí, lo hice ayer por la tarde.»",
-                    "ayuda": "Una respuesta válida es: Carlos dijo que lo había hecho ayer por la tarde.",
                     "tipo": "estilo_indirecto",
-                    "puntos": 0.30
+                    "puntos": 0.45
                 }
             ]
         }
