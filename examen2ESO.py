@@ -469,7 +469,7 @@ Carlos: Perfecto, allí estaremos más tranquilos.""",
             "preguntas": [
                 {
                     "id": "d1",
-                    "enunciado": "7.1. ¿Quiénes son los interlocutores?",
+                    "enunciado": "7.1. ¿Quiénes son los interlocutores?Sepáralos por comas ",
                     "ayuda": "Escribe los dos nombres. Sepáralos por comas o escribe uno en cada línea.",
                     "respuesta": "Lucía y Carlos",
                     "tipo": "lista",
