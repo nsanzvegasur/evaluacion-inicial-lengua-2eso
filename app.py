@@ -7,6 +7,16 @@ from analytics import radar_chart, comparativa, generar_perfil
 from pdf_report import generar_pdf
 from examen2ESO import EXAMEN
 
+# =====================================================
+# CORRECTOR ORTOGRÁFICO
+# =====================================================
+
+@st.cache_resource
+def cargar_corrector():
+    return language_tool_python.LanguageTool("es")
+
+corrector = cargar_corrector()
+
 # ============================================================
 
 # CONFIGURACIÓN
