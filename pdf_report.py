@@ -6,383 +6,255 @@ import unicodedata
 
 
 def limpiar_texto(texto):
+    """
+    Convierte cualquier texto a una versión segura para
+    las fuentes estándar de FPDF.
+    """
 
     if texto is None:
         return ""
 
     texto = str(texto)
 
-    # Normalización Unicode
-    texto = unicodedata.normalize(
-        "NFKD",
-        texto
-    )
-
-    # Sustituir caracteres problemáticos
     reemplazos = {
         "\u00a0": " ",
-        "á": "a",
-        "é": "e",
-        "í": "i",
-        "ó": "o",
-        "ú": "u",
-        "Á": "A",
-        "É": "E",
-        "Í": "I",
-        "Ó": "O",
-        "Ú": "U",
-        "ñ": "n",
-        "Ñ": "N",
-        "ü": "u",
-        "Ü": "U",
-        "¿": "?",
-        "¡": "!",
-        "«": '"',
-        "»": '"',
+        "º": "o",
+        "ª": "a",
+        "–": "-",
+        "—": "-",
+        "−": "-",
+        "…": "...",
         "“": '"',
         "”": '"',
         "‘": "'",
         "’": "'",
-        "–": "-",
-        "—": "-",
         "•": "-",
         "→": "->",
         "✓": "OK",
-        "✗": "X"
+        "✗": "X",
+        "€": "EUR"
     }
 
-    for original, nuevo in reemplazos.items():
-        texto = texto.replace(
-            original,
-            nuevo
-        )
+    for original, sustituto in reemplazos.items():
+        texto = texto.replace(original, sustituto)
 
-    # Eliminar caracteres que FPDF no puede manejar
+    texto = unicodedata.normalize("NFKC", texto)
+
+    # Convertimos a Latin-1 para que Arial/Helvetica de FPDF
+    # no produzcan errores con caracteres Unicode.
     texto = texto.encode(
         "latin-1",
-        errors="ignore"
-    ).decode(
-        "latin-1"
-    )
+        "replace"
+    ).decode("latin-1")
 
-    # Limpiar espacios repetidos
+    # Evita cadenas gigantes sin espacios.
     texto = re.sub(
-        r"[ \t]+",
-        " ",
-        texto
-    )
-
-    # Limpiar saltos repetidos
-    texto = re.sub(
-        r"\n\s*\n+",
-        "\n",
+        r"(\S{45})(?=\S)",
+        r"\1 ",
         texto
     )
 
     return texto.strip()
 
 
-class InformePDF(FPDF):
+def nombre_seguro(nombre):
+    nombre = limpiar_texto(nombre)
 
-    def texto_seguro(
-        self,
-        texto,
-        alto=7
-    ):
-        texto = limpiar_texto(texto)
+    nombre = re.sub(
+        r"[^A-Za-z0-9_-]+",
+        "_",
+        nombre
+    )
 
-        if not texto:
-            return
+    nombre = nombre.strip("_")
 
-        self.multi_cell(
-            0,
-            alto,
-            texto
-        )
+    if not nombre:
+        nombre = "alumno"
+
+    return nombre
+
+
+def escribir_bloque(pdf, texto, alto=7):
+    texto = limpiar_texto(texto)
+
+    if not texto:
+        return
+
+    pdf.multi_cell(
+        0,
+        alto,
+        texto
+    )
 
 
 def generar_pdf(
     nombre,
-    grupo,
+    curso,
     scores,
-    perfil,
-    nota_inicial=None,
-    descuento_ortografia=0,
-    faltas_ortografia=0,
-    faltas_tildes=0,
-    nota_final=None
+    nota_inicial,
+    descuento_ortografia,
+    nota_final,
+    perfil
 ):
-
-    pdf = InformePDF()
+    pdf = FPDF()
 
     pdf.set_auto_page_break(
         auto=True,
         margin=15
     )
 
+    pdf.set_margins(
+        left=15,
+        top=15,
+        right=15
+    )
+
     pdf.add_page()
 
-    # =====================================================
-    # CABECERA
-    # =====================================================
-
+    # Título
     pdf.set_font(
         "Arial",
         "B",
-        16
+        18
     )
 
-    pdf.cell(
-        0,
-        10,
-        "INFORME DE EVALUACION INICIAL",
-        ln=True
+    escribir_bloque(
+        pdf,
+        "Informe de Evaluacion Inicial - 2o ESO",
+        9
     )
+
+    pdf.ln(3)
 
     pdf.set_font(
         "Arial",
-        "B",
-        12
+        "",
+        11
     )
 
-    pdf.cell(
-        0,
-        8,
-        "2o ESO - Lengua Castellana y Literatura",
-        ln=True
+    escribir_bloque(
+        pdf,
+        f"Alumno/a: {nombre}"
     )
 
-    pdf.ln(5)
-
-    # =====================================================
-    # DATOS
-    # =====================================================
-
-    pdf.set_font(
-        "Arial",
-        size=11
+    escribir_bloque(
+        pdf,
+        f"Curso: {curso}"
     )
 
-    pdf.texto_seguro(
-        f"Nombre: {nombre}"
-    )
-
-    pdf.texto_seguro(
-        f"Grupo: {grupo}"
-    )
-
-    pdf.texto_seguro(
+    escribir_bloque(
+        pdf,
         f"Fecha: {datetime.now().strftime('%d/%m/%Y')}"
     )
 
-    pdf.ln(5)
+    pdf.ln(4)
 
-    # =====================================================
-    # RESULTADOS
-    # =====================================================
-
+    # Notas
     pdf.set_font(
         "Arial",
         "B",
         13
     )
 
-    pdf.cell(
-        0,
-        8,
-        "RESULTADOS",
-        ln=True
+    escribir_bloque(
+        pdf,
+        "Resultados"
     )
 
     pdf.set_font(
         "Arial",
-        size=11
+        "",
+        11
     )
 
-    nombres = {
-        "comprension": "Comprension lectora",
-        "morfologia": "Morfologia",
-        "semantica": "Semantica",
-        "literatura": "Literatura",
-        "sintaxis": "Sintaxis"
-    }
+    competencias = [
+        ("Comprension", "comprension"),
+        ("Morfologia", "morfologia"),
+        ("Semantica", "semantica"),
+        ("Literatura", "literatura"),
+        ("Sintaxis", "sintaxis")
+    ]
 
-    for clave, valor in scores.items():
+    for etiqueta, clave in competencias:
+        try:
+            valor = float(scores.get(clave, 0))
+        except (TypeError, ValueError):
+            valor = 0
 
-        if clave in nombres:
-            texto = nombres[clave]
-        else:
-            texto = clave.capitalize()
-
-        pdf.texto_seguro(
-            f"{texto}: {float(valor):.2f}/10"
+        escribir_bloque(
+            pdf,
+            f"{etiqueta}: {valor:.2f} / 10"
         )
 
     pdf.ln(3)
 
-    # =====================================================
-    # NOTA FINAL
-    # =====================================================
+    escribir_bloque(
+        pdf,
+        f"Nota inicial: {float(nota_inicial):.2f} / 10"
+    )
 
-    if nota_inicial is not None:
+    escribir_bloque(
+        pdf,
+        f"Descuento por ortografia: -{float(descuento_ortografia):.2f}"
+    )
 
-        pdf.set_font(
-            "Arial",
-            "B",
-            11
-        )
-
-        pdf.texto_seguro(
-            f"Nota inicial: {float(nota_inicial):.2f}/10"
-        )
-
-        pdf.set_font(
-            "Arial",
-            size=11
-        )
-
-        pdf.texto_seguro(
-            f"Faltas de ortografia detectadas: {faltas_ortografia}"
-        )
-
-        pdf.texto_seguro(
-            f"Faltas de tilde detectadas: {faltas_tildes}"
-        )
-
-        pdf.texto_seguro(
-            f"Descuento ortografico: -{float(descuento_ortografia):.2f}"
-        )
-
-        pdf.set_font(
-            "Arial",
-            "B",
-            12
-        )
-
-        if nota_final is not None:
-
-            pdf.texto_seguro(
-                f"Nota final: {float(nota_final):.2f}/10"
-            )
+    escribir_bloque(
+        pdf,
+        f"Nota final: {float(nota_final):.2f} / 10"
+    )
 
     pdf.ln(5)
 
-    # =====================================================
-    # DIAGNÓSTICO PEDAGÓGICO
-    # =====================================================
-
+    # Perfil
     pdf.set_font(
         "Arial",
         "B",
         13
     )
 
-    pdf.cell(
-        0,
-        8,
-        "DIAGNOSTICO PEDAGOGICO",
-        ln=True
+    escribir_bloque(
+        pdf,
+        "Perfil del alumno"
     )
 
     pdf.set_font(
         "Arial",
-        size=11
+        "",
+        11
     )
 
-    for item in perfil:
-
-        pdf.texto_seguro(
-            "- " + str(item),
-            alto=7
-        )
-
-    pdf.ln(5)
-
-    # =====================================================
-    # OBSERVACIÓN GENERAL
-    # =====================================================
-
-    pdf.set_font(
-        "Arial",
-        "B",
-        13
-    )
-
-    pdf.cell(
-        0,
-        8,
-        "OBSERVACION GENERAL",
-        ln=True
-    )
-
-    pdf.set_font(
-        "Arial",
-        size=11
-    )
-
-    if nota_final is not None:
-
-        nota = float(nota_final)
-
-        if nota < 5:
-
-            observacion = (
-                "El alumno necesita refuerzo en varias de las "
-                "competencias basicas evaluadas."
+    if perfil:
+        for observacion in perfil:
+            escribir_bloque(
+                pdf,
+                f"- {observacion}"
             )
-
-        elif nota < 7:
-
-            observacion = (
-                "El alumno presenta un nivel medio y cuenta con "
-                "algunas areas concretas de mejora."
-            )
-
-        else:
-
-            observacion = (
-                "El alumno presenta un buen dominio general "
-                "de las competencias evaluadas."
-            )
-
     else:
-
-        observacion = (
-            "Informe correspondiente a la evaluacion inicial."
+        escribir_bloque(
+            pdf,
+            "No se han generado observaciones."
         )
 
-    pdf.texto_seguro(
-        observacion,
-        alto=7
+    # Pie
+    pdf.ln(8)
+
+    pdf.set_font(
+        "Arial",
+        "I",
+        9
     )
 
-    # =====================================================
-    # GUARDAR
-    # =====================================================
-
-    nombre_archivo = limpiar_texto(
-        nombre
+    escribir_bloque(
+        pdf,
+        "Informe generado automaticamente por la aplicacion de Evaluacion Inicial."
     )
 
-    nombre_archivo = re.sub(
-        r"[^A-Za-z0-9_-]+",
-        "_",
-        nombre_archivo
+    archivo = (
+        f"informe_{nombre_seguro(nombre)}.pdf"
     )
 
-    nombre_archivo = nombre_archivo.strip(
-        "_"
-    )
+    ruta = os.path.abspath(archivo)
 
-    if not nombre_archivo:
-        nombre_archivo = "alumno"
+    pdf.output(ruta)
 
-    filename = (
-        f"informe_{nombre_archivo}.pdf"
-    )
-
-    pdf.output(
-        filename
-    )
-
-    return filename
+    return ruta
