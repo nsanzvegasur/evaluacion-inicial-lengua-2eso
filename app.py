@@ -1219,7 +1219,7 @@ if st.session_state.get(
             st.exception(error)
 
     st.info(
-        "El resultado de la clase y el historial de otros alumnos no se muestran en esta pantalla."
+        "Envía los resultados por classroom a tu profesor"
     )
 
     st.stop()
