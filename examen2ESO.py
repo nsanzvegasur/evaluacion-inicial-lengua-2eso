@@ -18,13 +18,13 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 {
                     "id": "c1_lugar",
                     "enunciado": "1.1. Lugar",
-                    "ayuda": "Indica el lugar donde ocurre la historia.",
+                    "ayuda": "Indica dónde ocurre la historia. Puedes mencionar el tren, el vagón, las estaciones o la ciudad.",
                     "tipo": "texto",
                     "puntos": 0.30,
                     "criterios": [
                         "tren",
                         "vagón",
-                        "estaciones",
+                        "estación",
                         "ciudad"
                     ]
                 },
@@ -32,8 +32,8 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 {
                     "id": "c1_personajes",
                     "enunciado": "1.1. Personajes",
-                    "ayuda": "Indica los personajes que aparecen en el texto.",
-                    "tipo": "texto",
+                    "ayuda": "Escribe los personajes que aparecen. Si escribes varios, sepáralos con comas.",
+                    "tipo": "personajes",
                     "puntos": 0.35,
                     "criterios": [
                         "hombre joven",
@@ -77,7 +77,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 {
                     "id": "c2_accion2",
                     "enunciado": "1.2. Segunda acción",
-                    "ayuda": "Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
+                    "ayuda": "Localiza otra acción que ocurra en el texto y escríbela en infinitivo.",
                     "tipo": "accion",
                     "puntos": 0.333,
                     "criterios": [
@@ -97,7 +97,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 {
                     "id": "c2_accion3",
                     "enunciado": "1.2. Tercera acción",
-                    "ayuda": "Localiza una acción que ocurra en el texto y escríbela en infinitivo.",
+                    "ayuda": "Localiza otra acción que ocurra en el texto y escríbela en infinitivo.",
                     "tipo": "accion",
                     "puntos": 0.334,
                     "criterios": [
@@ -111,21 +111,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                         "bajar",
                         "respirar",
                         "caminar"
-                    ]
-                },
-
-                {
-                    "id": "c3_resumen",
-                    "enunciado": "1.3. Resume el texto con tus palabras",
-                    "ayuda": "Escribe un resumen completo y coherente.",
-                    "tipo": "resumen",
-                    "puntos": 1.0,
-                    "criterios": [
-                        "tren",
-                        "madrugada",
-                        "viajero",
-                        "estación",
-                        "ciudad"
                     ]
                 }
             ]
@@ -239,7 +224,7 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
         ],
 
         # =========================================================
-        # 2.2 DETERMINANTES Y PRONOMBRES
+        # 2.2. DETERMINANTES Y PRONOMBRES
         # =========================================================
 
         "determinantes_pronombres": [
@@ -347,13 +332,6 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
                 "enunciado": "4.1. Texto C → Tipo de texto",
                 "respuesta": "argumentativo",
                 "puntos": 0.25
-            },
-
-            {
-                "id": "t4",
-                "enunciado": "4.2. Explica la finalidad de UNO de los textos (A, B o C)",
-                "tipo": "finalidad",
-                "puntos": 0.25
             }
         ],
 
@@ -392,10 +370,12 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
             {
                 "id": "l3",
                 "enunciado": "5.3. Esquema métrico",
+                "ayuda": "Escribe el esquema completo de los cuatro versos. Puedes separar los versos con espacios o con comas.",
                 "respuesta": "14A 14B 14B 14A",
                 "alternativas": [
                     "14A 14B 14B 14A",
-                    "14A, 14B, 14B, 14A"
+                    "14A, 14B, 14B, 14A",
+                    "14A,14B,14B,14A"
                 ],
                 "puntos": 0.35
             },
@@ -409,16 +389,29 @@ Cuando el tren llegó a la estación final, la luz del amanecer comenzó a apare
 
             {
                 "id": "l5",
-                "enunciado": "5.5. Escribe una sinalefa del poema y explícala",
+                "enunciado": "5.5. Localiza una sinalefa del poema y escribe únicamente las palabras que forman la sinalefa.",
+                "ayuda": "Escribe solo las dos palabras que forman la sinalefa. Ejemplo de formato: «lluvia cae». No es necesario explicar qué es una sinalefa.",
                 "tipo": "sinalefa",
-                "puntos": 0.45
+                "puntos": 0.45,
+                "respuestas_validas": [
+                    "lluvia cae",
+                    "suave en",
+                    "y el",
+                    "si todo",
+                    "todo fuera"
+                ]
             },
 
             {
                 "id": "l6",
-                "enunciado": "5.6. Localiza una personificación en el poema y explícala",
+                "enunciado": "5.6. Localiza una personificación del poema y escribe únicamente las palabras exactas que la forman.",
+                "ayuda": "Escribe solo las palabras exactas del poema. No es necesario explicar qué es una personificación.",
                 "tipo": "personificacion",
-                "puntos": 0.45
+                "puntos": 0.45,
+                "respuestas_validas": [
+                    "el viento juega",
+                    "viento juega"
+                ]
             }
         ],
 
@@ -527,7 +520,12 @@ Carlos: Perfecto, allí estaremos más tranquilos.""",
                 {
                     "id": "d1",
                     "enunciado": "7.1. ¿Quiénes son los interlocutores?",
-                    "respuesta": "Lucía y Carlos",
+                    "ayuda": "Escribe los DOS nombres de los interlocutores, separados por una coma. Ejemplo: Lucía, Carlos",
+                    "tipo": "interlocutores",
+                    "respuestas_validas": [
+                        "lucía",
+                        "carlos"
+                    ],
                     "puntos": 0.10
                 },
 
@@ -541,6 +539,7 @@ Carlos: Perfecto, allí estaremos más tranquilos.""",
                 {
                     "id": "d3",
                     "enunciado": "7.3. Pasa a estilo indirecto la intervención de Carlos: «Sí, lo hice ayer por la tarde.»",
+                    "ayuda": "Una respuesta válida es: Carlos dijo que lo había hecho ayer por la tarde.",
                     "tipo": "estilo_indirecto",
                     "puntos": 0.30
                 }
