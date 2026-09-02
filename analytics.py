@@ -1,35 +1,51 @@
 import plotly.graph_objects as go
 import pandas as pd
 
-# =========================
-# RADAR CHART (PERFIL ALUMNO)
-# =========================
+
+# ============================================================
+# NOMBRES BONITOS
+# ============================================================
+
+NOMBRES = {
+    "comprension": "Comprensión",
+    "morfologia": "Morfología",
+    "semantica": "Semántica",
+    "literatura": "Literatura",
+    "sintaxis": "Sintaxis"
+}
+
+
+# ============================================================
+# RADAR
+# ============================================================
+
 def radar_chart(alumno_scores, nombre="Alumno"):
-    """
-    alumno_scores = dict con competencias:
-    {
-        "comprension": 6,
-        "morfologia": 4,
-        "semantica": 7,
-        "literatura": 5,
-        "sintaxis": 3
-    }
-    """
 
     categorias = list(alumno_scores.keys())
-    valores = list(alumno_scores.values())
+
+    etiquetas = [
+        NOMBRES.get(c, c)
+        for c in categorias
+    ]
+
+    valores = [
+        float(alumno_scores[c])
+        for c in categorias
+    ]
 
     fig = go.Figure()
 
-    fig.add_trace(go.Scatterpolar(
-        r=valores,
-        theta=categorias,
-        fill='toself',
-        name=nombre
-    ))
+    fig.add_trace(
+        go.Scatterpolar(
+            r=valores,
+            theta=etiquetas,
+            fill="toself",
+            name=nombre
+        )
+    )
 
     fig.update_layout(
-        title=f"📊 Perfil competencial: {nombre}",
+        title=f"Perfil competencial: {nombre}",
         polar=dict(
             radialaxis=dict(
                 visible=True,
@@ -42,69 +58,104 @@ def radar_chart(alumno_scores, nombre="Alumno"):
     return fig
 
 
-# =========================
-# COMPARATIVA ALUMNO VS CLASE
-# =========================
+# ============================================================
+# COMPARATIVA
+# ============================================================
+
 def comparativa(alumno, df):
-    """
-    alumno = fila del dataframe
-    df = dataset completo
-    """
 
-    competencias = ["comprension", "morfologia", "semantica", "literatura", "sintaxis"]
+    competencias = [
+        "comprension",
+        "morfologia",
+        "semantica",
+        "literatura",
+        "sintaxis"
+    ]
 
-    media_clase = df[competencias].mean().to_dict()
+    etiquetas = [
+        NOMBRES[c]
+        for c in competencias
+    ]
 
-    alumno_vals = {c: alumno[c] for c in competencias}
+    media_clase = [
+        float(df[c].mean())
+        for c in competencias
+    ]
+
+    valores_alumno = [
+        float(alumno[c])
+        for c in competencias
+    ]
 
     fig = go.Figure()
 
-    fig.add_trace(go.Bar(
-        x=competencias,
-        y=[alumno_vals[c] for c in competencias],
-        name="Alumno"
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=etiquetas,
+            y=valores_alumno,
+            name="Alumno"
+        )
+    )
 
-    fig.add_trace(go.Bar(
-        x=competencias,
-        y=[media_clase[c] for c in competencias],
-        name="Media clase"
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=etiquetas,
+            y=media_clase,
+            name="Media clase"
+        )
+    )
 
     fig.update_layout(
-        title="📊 Alumno vs Clase",
-        barmode='group'
+        title="Alumno vs media de la clase",
+        barmode="group",
+        yaxis=dict(
+            range=[0, 10],
+            title="Puntuación / 10"
+        )
     )
 
     return fig
 
 
-# =========================
-# PERFIL INTERPRETABLE
-# =========================
+# ============================================================
+# PERFIL
+# ============================================================
+
 def generar_perfil(scores):
-    """
-    Devuelve diagnóstico pedagógico automático
-    """
 
     perfil = []
 
-    if scores["comprension"] < 5:
-        perfil.append("🔴 Dificultades en comprensión lectora")
+    for competencia, nota in scores.items():
 
-    if scores["morfologia"] < 5:
-        perfil.append("🔴 Problemas en identificación gramatical")
+        nombre = NOMBRES.get(
+            competencia,
+            competencia
+        )
 
-    if scores["semantica"] < 5:
-        perfil.append("🟠 Dificultades en conceptos semánticos")
+        nota = float(nota)
 
-    if scores["literatura"] >= 7:
-        perfil.append("🟢 Buen dominio de recursos literarios")
+        if nota < 4:
 
-    if scores["sintaxis"] < 5:
-        perfil.append("🔴 Dificultades en estructura oracional")
+            perfil.append(
+                f"🔴 Necesita refuerzo en {nombre} ({nota:.1f}/10)."
+            )
 
-    if not perfil:
-        perfil.append("🟢 Nivel equilibrado en todas las competencias")
+        elif nota < 6:
+
+            perfil.append(
+                f"🟠 Nivel básico en {nombre} ({nota:.1f}/10)."
+            )
+
+        elif nota < 8:
+
+            perfil.append(
+                f"🟡 Nivel adecuado en {nombre} ({nota:.1f}/10)."
+            )
+
+        else:
+
+            perfil.append(
+                f"🟢 Buen dominio de {nombre} ({nota:.1f}/10)."
+            )
 
     return perfil
