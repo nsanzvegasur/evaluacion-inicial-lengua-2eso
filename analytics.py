@@ -2,24 +2,40 @@ import pandas as pd
 import plotly.graph_objects as go
 
 
+# ============================================================
+# COMPETENCIAS DEL EXAMEN
+# ============================================================
+
 COMPETENCIAS = [
     "comprension",
     "morfologia",
     "semantica",
+    "textos",
     "literatura",
-    "sintaxis"
+    "sintaxis",
+    "dialogo"
 ]
 
+
+# ============================================================
+# NOMBRES QUE SE MOSTRARÁN EN LA APP
+# ============================================================
 
 def nombres_competencias():
     return {
         "comprension": "Comprensión",
         "morfologia": "Morfología",
         "semantica": "Semántica",
+        "textos": "Textos",
         "literatura": "Literatura",
-        "sintaxis": "Sintaxis"
+        "sintaxis": "Sintaxis",
+        "dialogo": "Diálogo"
     }
 
+
+# ============================================================
+# CONVERSIÓN SEGURA A NÚMERO
+# ============================================================
 
 def numero(valor):
     try:
@@ -27,6 +43,10 @@ def numero(valor):
     except (TypeError, ValueError):
         return 0.0
 
+
+# ============================================================
+# RADAR DEL ALUMNO
+# ============================================================
 
 def radar_chart(datos, titulo="Perfil competencial"):
     nombres = nombres_competencias()
@@ -41,6 +61,7 @@ def radar_chart(datos, titulo="Perfil competencial"):
         for c in COMPETENCIAS
     ]
 
+    # Cerramos el radar
     valores.append(valores[0])
     etiquetas.append(etiquetas[0])
 
@@ -69,6 +90,10 @@ def radar_chart(datos, titulo="Perfil competencial"):
     return figura
 
 
+# ============================================================
+# COMPARATIVA DE LA CLASE
+# ============================================================
+
 def comparativa_clase(df):
     if df is None or df.empty:
         return None
@@ -84,15 +109,19 @@ def comparativa_clase(df):
     medias = []
 
     for columna in columnas:
-        medias.append(
-            pd.to_numeric(
-                df[columna],
-                errors="coerce"
-            ).mean()
+        serie = pd.to_numeric(
+            df[columna],
+            errors="coerce"
         )
 
+        medias.append(
+            serie.mean()
+        )
+
+    nombres = nombres_competencias()
+
     etiquetas = [
-        nombres_competencias()[c]
+        nombres[c]
         for c in columnas
     ]
 
@@ -116,6 +145,10 @@ def comparativa_clase(df):
     return figura
 
 
+# ============================================================
+# RESUMEN DE LA CLASE
+# ============================================================
+
 def resumen_clase(df):
     if df is None or df.empty:
         return {}
@@ -126,36 +159,49 @@ def resumen_clase(df):
         notas = pd.to_numeric(
             df["nota_final"],
             errors="coerce"
-        )
+        ).dropna()
 
-        resultado["media"] = round(
-            notas.mean(),
-            2
-        )
+        if not notas.empty:
 
-        resultado["aprobados"] = int(
-            (notas >= 5).sum()
-        )
+            resultado["media"] = round(
+                notas.mean(),
+                2
+            )
 
-        resultado["suspensos"] = int(
-            (notas < 5).sum()
-        )
+            resultado["aprobados"] = int(
+                (notas >= 5).sum()
+            )
+
+            resultado["suspensos"] = int(
+                (notas < 5).sum()
+            )
+
+            resultado["alumnos"] = int(
+                notas.count()
+            )
 
     return resultado
 
+
+# ============================================================
+# PERFIL DEL ALUMNO
+# ============================================================
 
 def generar_perfil(datos):
     resultado = {}
 
     for competencia in COMPETENCIAS:
+
         valor = numero(
             datos.get(competencia, 0)
         )
 
         if valor >= 8:
             nivel = "Fortaleza"
+
         elif valor >= 5:
             nivel = "Nivel adecuado"
+
         else:
             nivel = "Necesita refuerzo"
 
