@@ -1,3 +1,6 @@
+
+--- requirements ---
 streamlit
 pandas
 plotly
+language-tool-python

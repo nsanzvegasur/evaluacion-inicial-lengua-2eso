@@ -7,6 +7,7 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
+import language_tool_python
 
 from examen2ESO import EXAMEN
 
@@ -176,31 +177,77 @@ def corregir_examen(respuestas):
 
 
 def detectar_ortografia(textos):
-    errores = {
-        "aver": "a ver",
-        "haver": "haber",
-        "hechar": "echar",
-    }
-    tildes = {
-        "tambien", "despues", "todavia", "accion", "numero",
-        "oracion", "semantica", "metrica", "personificacion",
-        "morfologia", "interrogativa", "exclamativa", "desiderativa"
-    }
-    faltas = 0
-    faltas_tilde = 0
-    vistos_error = set()
-    vistos_tilde = set()
-    for texto in textos:
-        t = normalizar(texto)
-        for incorrecta in errores:
-            if re.search(rf"\b{re.escape(incorrecta)}\b", t) and incorrecta not in vistos_error:
-                faltas += 1
-                vistos_error.add(incorrecta)
-        for palabra in tildes:
-            if re.search(rf"\b{re.escape(palabra)}\b", t) and palabra not in vistos_tilde:
-                faltas_tilde += 1
-                vistos_tilde.add(palabra)
-    descuento = min(2.0, faltas * 0.20 + faltas_tilde * 0.10)
+    """
+    Detecta faltas ortográficas y tildes con LanguageTool en español.
+    Solo contamos errores ortográficos (TYPOS) y de tildes/diacríticos
+    (DIACRITICS), no errores gramaticales ni de estilo.
+    La misma falta repetida se cuenta una sola vez.
+    """
+    try:
+        herramienta = language_tool_python.LanguageToolPublicAPI("es")
+    except Exception:
+        return 0, 0, 0.0
+
+    errores_vistos = set()
+    tildes_vistas = set()
+
+    try:
+        for texto in textos:
+            if not isinstance(texto, str) or not texto.strip():
+                continue
+
+            try:
+                coincidencias = herramienta.check(texto)
+            except Exception:
+                continue
+
+            for match in coincidencias:
+                categoria = str(getattr(match, "category", ""))
+                rule_id = str(getattr(match, "rule_id", ""))
+                mensaje = str(getattr(match, "message", ""))
+
+                # TYPOS = faltas de ortografía como "sustantibo".
+                # DIACRITICS = errores de tildes/diacríticos.
+                es_tilde = (
+                    categoria == "DIACRITICS"
+                    or "TILDE" in rule_id.upper()
+                    or "ACCENT" in rule_id.upper()
+                    or "tilde" in mensaje.lower()
+                )
+
+                es_ortografia = (
+                    categoria == "TYPOS"
+                    or "MORFOLOGIK" in rule_id.upper()
+                    or "SPELL" in rule_id.upper()
+                    or "SPELLING" in rule_id.upper()
+                )
+
+                contexto = str(getattr(match, "sentence", ""))
+                offset = int(getattr(match, "offset_in_context", 0))
+                longitud = int(getattr(match, "error_length", 0))
+                palabra = contexto[offset:offset + longitud].strip().lower()
+
+                clave = (palabra, rule_id, categoria)
+
+                if es_tilde:
+                    tildes_vistas.add(clave)
+                elif es_ortografia:
+                    errores_vistos.add(clave)
+
+    finally:
+        try:
+            herramienta.close()
+        except Exception:
+            pass
+
+    faltas = len(errores_vistos)
+    faltas_tilde = len(tildes_vistas)
+
+    descuento = min(
+        2.0,
+        faltas * 0.20 + faltas_tilde * 0.10
+    )
+
     return faltas, faltas_tilde, round(descuento, 2)
 
 
@@ -253,10 +300,9 @@ if st.session_state.get("enviado", False):
         ("morfologia", "Morfología"),
         ("determinantes", "Determinantes y pronombres"),
         ("semantica", "Semántica"),
-        ("textos", "Textos"),
+        ("textos", "Textos y diálogo"),
         ("literatura", "Literatura"),
         ("sintaxis", "Sintaxis"),
-        ("dialogo", "Diálogo"),
     ]
     for i, (clave, titulo) in enumerate(nombres):
         cols[i % 4].metric(titulo, f"{puntos[clave]:.2f}")
@@ -265,6 +311,8 @@ if st.session_state.get("enviado", False):
     st.write(f"**Descuento por faltas de ortografía:** -{descuento:.2f}")
     st.write(f"**Faltas detectadas:** {faltas} · **Tildes:** {faltas_tilde}")
     st.write(f"**Nota final:** {nota_final:.2f}/10")
+
+    st.info("Textos y diálogo se valoran conjuntamente sobre 10 para identificar el nivel de refuerzo.")
 
     st.subheader("📥 Descargar resultado")
     st.download_button(
@@ -367,10 +415,9 @@ if st.button("✅ ENVIAR EXAMEN", use_container_width=True):
         "morfologia": puntos["morfologia"],
         "determinantes": puntos["determinantes"],
         "semantica": puntos["semantica"],
-        "textos": puntos["textos"],
+        "textos": round((puntos["textos"] + puntos["dialogo"]) / 1.5 * 10, 2),
         "literatura": puntos["literatura"],
         "sintaxis": puntos["sintaxis"],
-        "dialogo": puntos["dialogo"],
         "nota_sin_faltas": nota_inicial,
         "faltas_ortografia": faltas,
         "faltas_tilde": faltas_tilde,
