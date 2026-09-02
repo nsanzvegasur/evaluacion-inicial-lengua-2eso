@@ -1,11 +1,6 @@
 import pandas as pd
 import plotly.graph_objects as go
 
-
-# ============================================================
-# COMPETENCIAS DEL EXAMEN
-# ============================================================
-
 COMPETENCIAS = [
     "comprension",
     "morfologia",
@@ -13,13 +8,19 @@ COMPETENCIAS = [
     "textos",
     "literatura",
     "sintaxis",
-    "dialogo"
+    "dialogo",
 ]
 
+MAXIMOS = {
+    "comprension": 2.0,
+    "morfologia": 2.5,
+    "semantica": 1.5,
+    "textos": 1.0,
+    "literatura": 2.0,
+    "sintaxis": 1.0,
+    "dialogo": 0.5,
+}
 
-# ============================================================
-# NOMBRES QUE SE MOSTRARÁN EN LA APP
-# ============================================================
 
 def nombres_competencias():
     return {
@@ -29,13 +30,9 @@ def nombres_competencias():
         "textos": "Textos",
         "literatura": "Literatura",
         "sintaxis": "Sintaxis",
-        "dialogo": "Diálogo"
+        "dialogo": "Diálogo",
     }
 
-
-# ============================================================
-# CONVERSIÓN SEGURA A NÚMERO
-# ============================================================
 
 def numero(valor):
     try:
@@ -44,170 +41,132 @@ def numero(valor):
         return 0.0
 
 
-# ============================================================
-# RADAR DEL ALUMNO
-# ============================================================
+def normalizar_nota_area(valor, competencia):
+    maximo = MAXIMOS.get(competencia, 1.0)
+    if maximo <= 0:
+        return 0.0
+    return max(0.0, min(10.0, numero(valor) / maximo * 10.0))
+
 
 def radar_chart(datos, titulo="Perfil competencial"):
     nombres = nombres_competencias()
-
     valores = [
-        numero(datos.get(c, 0))
+        normalizar_nota_area(datos.get(c, 0), c)
         for c in COMPETENCIAS
     ]
-
-    etiquetas = [
-        nombres[c]
-        for c in COMPETENCIAS
-    ]
-
-    # Cerramos el radar
+    etiquetas = [nombres[c] for c in COMPETENCIAS]
     valores.append(valores[0])
     etiquetas.append(etiquetas[0])
 
     figura = go.Figure()
-
     figura.add_trace(
         go.Scatterpolar(
             r=valores,
             theta=etiquetas,
             fill="toself",
-            name="Resultado"
+            name="Resultado",
         )
     )
-
     figura.update_layout(
         title=titulo,
-        polar=dict(
-            radialaxis=dict(
-                visible=True,
-                range=[0, 10]
-            )
-        ),
-        showlegend=False
+        polar=dict(radialaxis=dict(visible=True, range=[0, 10])),
+        showlegend=False,
     )
-
     return figura
 
-
-# ============================================================
-# COMPARATIVA DE LA CLASE
-# ============================================================
 
 def comparativa_clase(df):
     if df is None or df.empty:
         return None
 
-    columnas = [
-        c for c in COMPETENCIAS
-        if c in df.columns
-    ]
-
+    columnas = [c for c in COMPETENCIAS if c in df.columns]
     if not columnas:
         return None
 
-    medias = []
-
-    for columna in columnas:
-        serie = pd.to_numeric(
-            df[columna],
-            errors="coerce"
-        )
-
-        medias.append(
-            serie.mean()
-        )
-
-    nombres = nombres_competencias()
-
-    etiquetas = [
-        nombres[c]
+    medias = [
+        pd.to_numeric(df[c], errors="coerce").mean()
+        / MAXIMOS[c] * 10
         for c in columnas
     ]
+    etiquetas = [nombres_competencias()[c] for c in columnas]
 
     figura = go.Figure()
-
-    figura.add_trace(
-        go.Bar(
-            x=etiquetas,
-            y=medias
-        )
-    )
-
+    figura.add_trace(go.Bar(x=etiquetas, y=medias))
     figura.update_layout(
-        title="Media de la clase por competencia",
-        yaxis=dict(
-            title="Nota",
-            range=[0, 10]
-        )
+        title="Media de la clase por área",
+        yaxis=dict(title="Nivel sobre 10", range=[0, 10]),
     )
-
     return figura
 
 
-# ============================================================
-# RESUMEN DE LA CLASE
-# ============================================================
+def comparativa(alumno, df):
+    if df is None or df.empty:
+        return None
+
+    columnas = [c for c in COMPETENCIAS if c in df.columns]
+    if not columnas:
+        return None
+
+    medias = [
+        pd.to_numeric(df[c], errors="coerce").mean()
+        / MAXIMOS[c] * 10
+        for c in columnas
+    ]
+    alumno_vals = [
+        normalizar_nota_area(alumno.get(c, 0), c)
+        for c in columnas
+    ]
+    etiquetas = [nombres_competencias()[c] for c in columnas]
+
+    figura = go.Figure()
+    figura.add_trace(go.Bar(name="Alumno", x=etiquetas, y=alumno_vals))
+    figura.add_trace(go.Bar(name="Clase", x=etiquetas, y=medias))
+    figura.update_layout(
+        title="Alumno frente a la media de la clase",
+        yaxis=dict(title="Nivel sobre 10", range=[0, 10]),
+        barmode="group",
+    )
+    return figura
+
 
 def resumen_clase(df):
     if df is None or df.empty:
         return {}
 
-    resultado = {}
+    resultado = {"alumnos": len(df)}
+    columna = "nota_final" if "nota_final" in df.columns else "total"
 
-    if "nota_final" in df.columns:
-        notas = pd.to_numeric(
-            df["nota_final"],
-            errors="coerce"
-        ).dropna()
-
+    if columna in df.columns:
+        notas = pd.to_numeric(df[columna], errors="coerce").dropna()
         if not notas.empty:
-
-            resultado["media"] = round(
-                notas.mean(),
-                2
-            )
-
-            resultado["aprobados"] = int(
-                (notas >= 5).sum()
-            )
-
-            resultado["suspensos"] = int(
-                (notas < 5).sum()
-            )
-
-            resultado["alumnos"] = int(
-                notas.count()
-            )
+            resultado["media"] = round(notas.mean(), 2)
+            resultado["aprobados"] = int((notas >= 5).sum())
+            resultado["suspensos"] = int((notas < 5).sum())
 
     return resultado
 
 
-# ============================================================
-# PERFIL DEL ALUMNO
-# ============================================================
-
 def generar_perfil(datos):
     resultado = {}
+    nombres = nombres_competencias()
 
     for competencia in COMPETENCIAS:
-
-        valor = numero(
-            datos.get(competencia, 0)
+        valor = normalizar_nota_area(
+            datos.get(competencia, 0),
+            competencia
         )
 
         if valor >= 8:
             nivel = "Fortaleza"
-
         elif valor >= 5:
             nivel = "Nivel adecuado"
-
         else:
             nivel = "Necesita refuerzo"
 
         resultado[competencia] = {
+            "nombre": nombres[competencia],
             "nota": round(valor, 2),
-            "nivel": nivel
+            "nivel": nivel,
         }
 
     return resultado
