@@ -400,28 +400,52 @@ def corregir(res):
 
     ind = normalizar(res.get("d3", ""))
 
-    ok_ind = (
-        (
-            "carlos" in ind
-            or "el dijo" in ind
-            or "respondio" in ind
-            or "respondió" in ind
-        )
-        and "que" in ind
-        and "habia hecho" in ind
-        and (
-            "dia anterior" in ind
-            or "dia antes" in ind
-        )
+    # ESTILO INDIRECTO = 0,30 puntos
+    # 0,10 → verbo introductorio adecuado
+    # 0,10 → nexo "que"
+    # 0,05 → cambio de "ayer" a "el día anterior" / "el día antes"
+    # 0,05 → transformación de "lo hice" a una forma de pluscuamperfecto
+
+    verbo_introductorio = any(
+        verbo in ind
+        for verbo in [
+            "dijo",
+            "respondio",
+            "contesto",
+            "afirmo",
+            "explico"
+        ]
     )
 
-    if ok_ind:
-        p["textos"] += 0.30
+    tiene_que = "que" in ind
 
-    p["textos"] = min(
-        round(p["textos"], 4),
-        1.5
+    cambio_temporal = any(
+        expresion in ind
+        for expresion in [
+            "dia anterior",
+            "dia antes"
+        ]
     )
+
+    transformacion_verbal = any(
+        expresion in ind
+        for expresion in [
+            "habia hecho",
+            "habia realizado"
+        ]
+    )
+
+    if verbo_introductorio:
+        p["textos"] += 0.10
+
+    if tiene_que:
+        p["textos"] += 0.10
+
+    if cambio_temporal:
+        p["textos"] += 0.05
+
+    if transformacion_verbal:
+        p["textos"] += 0.05
 
     
 
