@@ -925,17 +925,17 @@ if st.session_state.examen_enviado:
 
             try:
                 figura = comparativa(fila_anonima, df_anon)
+
                 if figura is not None:
-                    st.plotly_chart(figura, use_container_width=True)
+                    st.plotly_chart(
+                        figura,
+                        use_container_width=True
+                    )
+
             except Exception:
-                st.info("La comparativa no está disponible en este momento.")
-
-            if figura is not None:
-                st.plotly_chart(
-                    figura,
-                    use_container_width=True
+                st.info(
+                    "La comparativa no está disponible en este momento."
                 )
-
     st.success(
         "Tu evaluación está lista para descargar y entregar en Classroom."
     )
