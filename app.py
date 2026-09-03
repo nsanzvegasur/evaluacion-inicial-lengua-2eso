@@ -826,58 +826,7 @@ def alumno_ya_realizo_examen(nombre, grupo):
     ).any()
 
 
-    # ---------------------------------------------------------
-    # HOJA 1: RESULTADO
-    # ---------------------------------------------------------
-    ws_resultado = wb.active
-    ws_resultado.title = "Resultado"
-
-    resultado = [
-        ("Nombre", fila["name"]),
-        ("Grupo", fila["group"]),
-        ("Fecha", fila["date"]),
-        ("Nota final", fila["nota_examen_9"]),
-        ("Nota sin faltas", fila["nota_sin_faltas"]),
-        ("Comprensión", fila["comprension"]),
-        ("Morfología", fila["morfologia"]),
-        ("Semántica", fila["semantica"]),
-        ("Textos", fila["textos"]),
-        ("Literatura", fila["literatura"]),
-        ("Sintaxis", fila["sintaxis"]),
-        ("Faltas de ortografía", fila["faltas_ortografia"]),
-        ("Faltas de tildes", fila["faltas_tildes"]),
-        ("Descuento por ortografía", fila["descuento_ortografia"]),
-    ]
-
-    ws_resultado.append(["Dato", "Resultado"])
-
-    for dato, valor in resultado:
-        ws_resultado.append([dato, valor])
-
-    # ---------------------------------------------------------
-    # HOJA 2: RESPUESTAS
-    # ---------------------------------------------------------
-    ws_respuestas = wb.create_sheet("Respuestas")
-
-    ws_respuestas.append(["Pregunta", "Respuesta"])
-
-    for pregunta, respuesta in respuestas.items():
-        ws_respuestas.append([
-            pregunta,
-            str(respuesta)
-        ])
-
-    # Ajustar ancho de columnas
-    for ws in [ws_resultado, ws_respuestas]:
-        ws.column_dimensions["A"].width = 30
-        ws.column_dimensions["B"].width = 80
-
-    # Guardar en memoria
-    salida = io.BytesIO()
-    wb.save(salida)
-    salida.seek(0)
-
-    return salida.getvalue()
+   
     
 
 # =========================================================
