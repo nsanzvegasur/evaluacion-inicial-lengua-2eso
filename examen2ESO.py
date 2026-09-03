@@ -79,7 +79,7 @@ El viajero sintió que aquel día iba a ser el primero de su nueva vida, que tod
 
                 Las estrellas brillan sobre el cielo,
                 
-                El viento susurra junto al mar,
+                El viento susurra cerca del mar,
                 
                 Y la noche se cubre de hielo.""",
                             
