@@ -652,7 +652,7 @@ def excel_individual(fila, respuestas, perfil):
     ws["B5"] = fila["date"]
 
     ws["A7"] = "NOTA FINAL"
-    ws["B7"] = fila["nota_final"]
+    ws["B7"] = fila["nota_examen_9"]
 
     ws["A8"] = "Nota sin faltas"
     ws["B8"] = fila["nota_sin_faltas"]
@@ -773,7 +773,7 @@ def alumno_ya_realizo_examen(nombre, grupo):
         ("Nombre", fila["name"]),
         ("Grupo", fila["group"]),
         ("Fecha", fila["date"]),
-        ("Nota final", fila["nota_final"]),
+        ("Nota final", fila["nota_examen_9"]),
         ("Nota sin faltas", fila["nota_sin_faltas"]),
         ("Comprensión", fila["comprension"]),
         ("Morfología", fila["morfologia"]),
