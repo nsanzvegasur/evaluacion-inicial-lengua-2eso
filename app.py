@@ -609,6 +609,98 @@ def csv_individual(fila):
 
     return salida.getvalue().encode("utf-8-sig")
 
+def excel_individual(fila, respuestas, perfil):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment
+
+    wb = Workbook()
+
+    # ---------------------------------------------------------
+    # HOJA 1: RESULTADO
+    # ---------------------------------------------------------
+    ws = wb.active
+    ws.title = "Resultado"
+
+    ws["A1"] = "📚 Evaluación inicial de Lengua — 2.º ESO"
+    ws["A1"].font = Font(bold=True, size=16)
+
+    ws["A3"] = "Alumno"
+    ws["B3"] = fila["name"]
+
+    ws["A4"] = "Grupo"
+    ws["B4"] = fila["group"]
+
+    ws["A5"] = "Fecha y hora"
+    ws["B5"] = fila["date"]
+
+    ws["A7"] = "NOTA FINAL"
+    ws["B7"] = fila["nota_final"]
+
+    ws["A8"] = "Nota sin faltas"
+    ws["B8"] = fila["nota_sin_faltas"]
+
+    ws["A9"] = "Descuento por ortografía"
+    ws["B9"] = fila["descuento_ortografia"]
+
+    ws["A11"] = "RESULTADOS POR ÁREAS"
+    ws["A11"].font = Font(bold=True)
+
+    fila_excel = 12
+
+    for clave, nombre_area in NOMBRES.items():
+        ws.cell(fila_excel, 1).value = nombre_area
+        ws.cell(fila_excel, 2).value = fila[clave]
+        fila_excel += 1
+
+    ws[f"A{fila_excel + 1}"] = "PERFIL COMPETENCIAL"
+    ws[f"A{fila_excel + 1}"].font = Font(bold=True)
+
+    fila_perfil = fila_excel + 2
+
+    for item in perfil:
+        ws.cell(fila_perfil, 1).value = item["texto"]
+        ws.cell(fila_perfil, 1).alignment = Alignment(
+            wrap_text=True,
+            vertical="top"
+        )
+        fila_perfil += 1
+
+    ws.column_dimensions["A"].width = 38
+    ws.column_dimensions["B"].width = 25
+
+    # ---------------------------------------------------------
+    # HOJA 2: RESPUESTAS
+    # ---------------------------------------------------------
+    ws2 = wb.create_sheet("Respuestas")
+
+    ws2["A1"] = "Pregunta"
+    ws2["B1"] = "Respuesta"
+
+    ws2["A1"].font = Font(bold=True)
+    ws2["B1"].font = Font(bold=True)
+
+    fila_respuesta = 2
+
+    for pregunta, respuesta in respuestas.items():
+        ws2.cell(fila_respuesta, 1).value = pregunta
+        ws2.cell(fila_respuesta, 2).value = str(respuesta)
+        ws2.cell(fila_respuesta, 2).alignment = Alignment(
+            wrap_text=True,
+            vertical="top"
+        )
+        fila_respuesta += 1
+
+    ws2.column_dimensions["A"].width = 25
+    ws2.column_dimensions["B"].width = 80
+
+    # ---------------------------------------------------------
+    # GUARDAR EN MEMORIA
+    # ---------------------------------------------------------
+    salida = io.BytesIO()
+    wb.save(salida)
+    salida.seek(0)
+
+    return salida.getvalue()
 
 def safe_read_results():
     if not os.path.exists(CSV_FILE):
@@ -1056,25 +1148,19 @@ with st.form("examen"):
 
 
 # =========================================================
-# CORRECCIÓN
+# CORRECCIÓN Y RESULTADOS
 # =========================================================
 if enviar:
 
     if not nombre.strip():
-        st.error(
-            "Escribe tu nombre y apellidos."
-        )
+        st.error("Escribe tu nombre y apellidos.")
         st.stop()
 
     if not grupo:
-        st.error(
-            "Selecciona tu grupo."
-        )
+        st.error("Selecciona tu grupo.")
         st.stop()
 
-    puntos, nota_sin_faltas = corregir(
-        respuestas
-    )
+    puntos, nota_sin_faltas = corregir(respuestas)
 
     todas_respuestas = [
         v
@@ -1130,12 +1216,14 @@ if enviar:
         ),
     }
 
+    fecha_hora = datetime.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
     fila = {
         "name": nombre.strip(),
         "group": grupo,
-        "date": datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        ),
+        "date": fecha_hora,
         **scores,
         "nota_sin_faltas": nota_sin_faltas,
         "faltas_ortografia": faltas_ortografia,
@@ -1145,14 +1233,23 @@ if enviar:
     }
 
     guardar_csv(fila)
-    
-    excel_alumno = generar_excel_alumno(
-        fila,
-        respuestas
-    )
-    
+
+    # ---------------------------------------------------------
+    # PERFIL COMPETENCIAL
+    # ---------------------------------------------------------
+    perfil = generar_perfil(scores)
+
+    # ---------------------------------------------------------
+    # PANTALLA DE RESULTADOS
+    # ---------------------------------------------------------
     st.success(
-        "✅ Examen corregido y guardado correctamente."
+        "✅ Examen enviado correctamente."
+    )
+
+    st.header("📚 Resultado de tu evaluación")
+
+    st.write(
+        f"**Fecha y hora:** {fecha_hora}"
     )
 
     st.metric(
@@ -1169,19 +1266,10 @@ if enviar:
         f"**Descuento por faltas:** -{descuento:.2f}"
     )
 
-    st.write(
-        f"**Faltas de ortografía detectadas:** "
-        f"{faltas_ortografia}"
-    )
-
-    st.write(
-        f"**Faltas de tilde detectadas:** "
-        f"{faltas_tildes}"
-    )
-
-    st.subheader(
-        "Resultado por áreas"
-    )
+    # ---------------------------------------------------------
+    # RESULTADOS POR ÁREAS
+    # ---------------------------------------------------------
+    st.subheader("Resultado por áreas")
 
     cols = st.columns(3)
 
@@ -1199,140 +1287,95 @@ if enviar:
             f"{scores[c]:.2f}/10"
         )
 
-    st.subheader(
-        "🧠 Perfil competencial"
+    # ---------------------------------------------------------
+    # PERFIL COMPETENCIAL EN TEXTO
+    # ---------------------------------------------------------
+    st.subheader("🧠 Perfil competencial")
+
+    for item in perfil:
+        st.write(item["texto"])
+
+    # ---------------------------------------------------------
+    # DESCARGAS
+    # ---------------------------------------------------------
+    st.subheader("📥 Descarga tu evaluación")
+
+    st.info(
+        "Descarga tu evaluación y súbela a Classroom."
     )
 
-    for item in generar_perfil(scores):
-        st.write(
-            item["texto"]
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.download_button(
+            "⬇️ Descargar CSV",
+            data=csv_individual(fila),
+            file_name=(
+                f"Resultado_2ESO_"
+                f"{re.sub(r'[^A-Za-z0-9_-]+', '_', nombre.strip())}.csv"
+            ),
+            mime="text/csv",
+            use_container_width=True,
         )
 
-    st.plotly_chart(
-        radar_chart(
-            scores,
-            f"Perfil competencial: {nombre.strip()}"
-        ),
-        use_container_width=True
-    )
+    with col2:
+        st.download_button(
+            "⬇️ Descargar Excel",
+            data=excel_individual(
+                fila,
+                respuestas,
+                perfil
+            ),
+            file_name=(
+                f"Evaluacion_2ESO_"
+                f"{re.sub(r'[^A-Za-z0-9_-]+', '_', nombre.strip())}.xlsx"
+            ),
+            mime=(
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
+            ),
+            use_container_width=True,
+        )
 
+    # ---------------------------------------------------------
+    # COMPARACIÓN ANÓNIMA CON LA CLASE
+    # ---------------------------------------------------------
+    st.divider()
 
-    nombre_archivo_excel = (
-    f"Evaluacion_2ESO_"
-    f"{re.sub(r'[^A-Za-z0-9_-]+', '_', nombre.strip())}.xlsx"
-    )
-    
-    st.download_button(
-        "📊 Descargar mi resultado en Excel",
-        data=excel_alumno,
-        file_name=nombre_archivo_excel,
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True,
-    )
-    
-    st.download_button(
-        "⬇️ Descargar mi resultado CSV",
-        data=csv_individual(fila),
-        file_name=(
-            f"Resultado_2ESO_"
-            f"{re.sub(r'[^A-Za-z0-9_-]+', '_', nombre.strip())}.csv"
-        ),
-        mime="text/csv",
-        use_container_width=True,
-    )
-
-
-# =========================================================
-# DASHBOARD / COMPARATIVA ANÓNIMA
-# =========================================================
-with st.expander("📊 Estadísticas del grupo"):
+    st.subheader("📊 Comparación con la clase")
 
     df = safe_read_results()
 
-    if df.empty:
+    if not df.empty:
 
-        st.info(
-            "Todavía no hay resultados guardados."
-        )
+        df_clase = df[
+            df["group"] == grupo
+        ].copy()
 
-    else:
+        if not df_clase.empty:
 
-        st.write(
-            f"Resultados guardados: **{len(df)}**"
-        )
+            # Nombres completamente anónimos
+            df_anon = df_clase.copy()
 
-        # -----------------------------------------------------
-        # MEDIA DE LA CLASE
-        # -----------------------------------------------------
-        medias = {
-            c: pd.to_numeric(
-                df[c],
-                errors="coerce"
-            ).mean()
-            for c in NOMBRES
-            if c in df.columns
-        }
-
-        st.subheader("Media de la clase")
-
-        st.dataframe(
-            pd.DataFrame(
-                [medias]
-            ).rename(
-                columns=NOMBRES
-            ),
-            use_container_width=True
-        )
-
-        # -----------------------------------------------------
-        # COMPARATIVA SOLO DEL ALUMNO QUE ACABA DE REALIZAR
-        # EL EXAMEN
-        #
-        # No se muestra ningún nombre de otro alumno.
-        # No existe selector de compañeros.
-        # -----------------------------------------------------
-        if enviar and nombre.strip():
-
-            # Buscamos únicamente el resultado que acaba
-            # de guardar este alumno.
-            resultados_mismo_alumno = df[
-                df["name"].astype(str).str.strip()
-                == nombre.strip()
+            df_anon["name"] = [
+                f"Alumno {i + 1}"
+                for i in range(len(df_anon))
             ]
 
-            if not resultados_mismo_alumno.empty:
+            fila_anonima = df_anon.iloc[-1]
 
-                fila_alumno = resultados_mismo_alumno.iloc[-1]
+            figura = comparativa(
+                fila_anonima,
+                df_anon
+            )
 
-                # Creamos una copia exclusivamente para la
-                # comparativa y eliminamos cualquier nombre real.
-                df_comparativa = df.copy()
-
-                df_comparativa["name"] = "Alumno"
-
-                # La fila del alumno también queda anonimizada.
-                fila_alumno_anonima = fila_alumno.copy()
-                fila_alumno_anonima["name"] = "Tu resultado"
-
-                figura = comparativa(
-                    fila_alumno_anonima,
-                    df_comparativa
+            if figura is not None:
+                st.plotly_chart(
+                    figura,
+                    use_container_width=True
                 )
 
-                if figura is not None:
+    st.success(
+        "Tu evaluación está lista para descargar y entregar en Classroom."
+    )
 
-                    st.subheader(
-                        "Tu resultado frente a la media de la clase"
-                    )
-
-                    st.plotly_chart(
-                        figura,
-                        use_container_width=True
-                    )
-
-        else:
-
-            st.info(
-                "Realiza el examen para consultar tu comparativa "
-                "con la media de la clase."
-            )
