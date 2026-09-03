@@ -831,16 +831,20 @@ if st.session_state.examen_enviado:
 
     st.success("✅ Evaluación enviada correctamente.")
 
-    st.write(f"**Fecha y hora:** {fila['date']}")
-
-    st.metric(
-        "Nota final",
-        f"{fila['nota_final']:.2f} / 10"
+    st.success("✅ Esta parte de la evaluación se ha enviado correctamente.")
+    
+    st.info(
+        "✍️ **IMPORTANTE:** Has terminado esta parte de la evaluación. "
+        "Esta prueba automática vale **9 puntos**. "
+        "Ahora debes continuar con la **producción escrita**, que se corregirá aparte "
+        "y supondrá hasta **1 punto adicional**."
     )
-
+    
+    st.write(f"**Fecha y hora:** {fila['date']}")
+    st.metric("Nota de esta parte", f"{fila['nota_examen_9']:.2f} / 9")
     st.write(
         f"**Nota antes del descuento por ortografía:** "
-        f"{fila['nota_sin_faltas']:.2f} / 10"
+        f"{fila['nota_sin_faltas']:.2f} / 9"
     )
 
     st.divider()
@@ -1354,7 +1358,10 @@ if enviar:
         "faltas_ortografia": faltas_ortografia,
         "faltas_tildes": faltas_tildes,
         "descuento_ortografia": descuento,
-        "nota_final": nota_final,
+        "nota_examen_9": nota_final,
+        "produccion_escrita": "",
+        "nota_produccion_escrita": "",
+        "nota_final_10": "",
     }
 
     guardar_csv(fila)
