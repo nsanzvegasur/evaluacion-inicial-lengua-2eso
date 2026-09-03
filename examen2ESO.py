@@ -75,7 +75,9 @@ El viajero sintió que aquel día iba a ser el primero de su nueva vida, que tod
             ]
         },
         "literatura": {
-            "poema":"""La luna brilla sobre el gran mar,
+            "poema":"""
+            
+                La luna brilla sobre el gran mar,
 
                 Las estrellas brillan sobre el cielo,
                 
