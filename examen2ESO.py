@@ -83,7 +83,10 @@ El viajero sintió que aquel día iba a ser el primero de su nueva vida, que tod
                 
                 El viento susurra cerca del mar,
                 
-                Y la noche se cubre de hielo.""",
+                Y la noche se cubre de hielo.
+                
+                
+                """,
                             
             "preguntas": [
                 {"id": "l1", "enunciado": "5.1. Número de versos"},
