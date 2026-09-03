@@ -434,9 +434,16 @@ def corregir(res):
 
     met = normalizar(res.get("l3", ""))
 
+    # Normalizamos la respuesta para aceptar:
+    # 10A 10B 10A 10B
+    # 10a 10b 10a 10b
+    # 10A, 10B, 10A, 10B
+    # 10-A 10-B 10-A 10-B
+    # 10 A 10 B 10 A 10 B
     met_limpia = (
         met
         .replace(",", " ")
+        .replace(";", " ")
         .replace("/", " ")
         .replace("-", " ")
     )
@@ -447,23 +454,19 @@ def corregir(res):
         met_limpia
     ).strip()
 
+    # En este poema:
+    # - Los 4 versos tienen 10 sílabas métricas.
+    # - 10 sílabas = arte mayor.
+    # - El esquema de rima es ABAB.
+    #
+    # Se acepta A/a y B/b indistintamente para no penalizar
+    # al alumno por escribir las letras en mayúscula o minúscula.
+
     metricas_validas = {
-        "10a 11b 11b 10a",
-        "10a 11b 11b 11a",
-        "10 11 11 10",
-        "10 11 11 11",
-        "10-11-11-10",
-        "10 11 11 10a"
+        "10a 10b 10a 10b"
     }
 
     if met_limpia in metricas_validas:
-        p["literatura"] += 0.35
-
-    if exacta(
-        res.get("l4", ""),
-        "asonante",
-        "rima asonante"
-    ):
         p["literatura"] += 0.35
 
     sinal = normalizar(res.get("l5", ""))
