@@ -523,8 +523,7 @@ def corregir(res):
         1.0
     )
 
-    total = round(sum(p.values()), 2)
-
+    total = round(sum(p.values()) * 0.9, 2)
     return p, total
 
 
