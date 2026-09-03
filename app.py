@@ -9,17 +9,23 @@ import pandas as pd
 import streamlit as st
 from openpyxl import Workbook
 
-from examen2ESO import EXAMEN
+from examen2ESO_NEE import EXAMEN
 from analytics import radar_chart, comparativa, generar_perfil
 
+
+# ============================================================
+# CONFIGURACIÓN
+# ============================================================
+
 st.set_page_config(
-    page_title="Evaluación Inicial Lengua 2.º ESO",
+    page_title="Evaluación Inicial Lengua 2.º ESO NEE",
     page_icon="📚",
-    layout="centered",
+    layout="centered"
 )
 
 CSV_FILE = "results.csv"
 
+# Estado de sesión
 if "examen_enviado" not in st.session_state:
     st.session_state.examen_enviado = False
 
@@ -38,9 +44,30 @@ if "resultado_excel" not in st.session_state:
 if "resultado_csv" not in st.session_state:
     st.session_state.resultado_csv = None
 
-EXAM = EXAMEN["2ESO"]
 
-# Puntuación final = 10 puntos exactos.
+EXAM = EXAMEN["2ESO_NEE"]
+
+
+# ============================================================
+# PUNTUACIÓN
+# ============================================================
+
+# Igual estructura que el examen ordinario:
+#
+# Comprensión ........ 2,0
+# Morfología ......... 2,5
+# Semántica .......... 1,0
+# Textos + diálogo ... 1,5
+# Literatura ......... 2,0
+# Sintaxis ........... 1,0
+#
+# TOTAL AUTOMÁTICO = 10 puntos
+# Se transforma a 9 puntos.
+#
+# Producción escrita = 1 punto adicional.
+#
+# NOTA FINAL = automático / 9 + producción / 1
+
 PESOS = {
     "comprension": 2.0,
     "morfologia": 2.5,
@@ -50,1355 +77,1987 @@ PESOS = {
     "sintaxis": 1.0,
 }
 
+
 NOMBRES = {
-    "comprension": "Comprensión",
+    "comprension": "Comprensión lectora",
     "morfologia": "Morfología",
     "semantica": "Semántica",
-    "textos": "Textos",
+    "textos": "Tipos de texto y diálogo",
     "literatura": "Literatura",
     "sintaxis": "Sintaxis",
 }
 
 
-def normalizar(valor):
-    if valor is None:
+# ============================================================
+# NORMALIZACIÓN
+# ============================================================
+
+def normalizar(texto):
+    if texto is None:
         return ""
-    texto = str(valor).strip().lower()
+
+    texto = str(texto).strip().lower()
+
     texto = unicodedata.normalize("NFD", texto)
-    texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
+    texto = "".join(
+        c for c in texto
+        if unicodedata.category(c) != "Mn"
+    )
+
     texto = re.sub(r"\s+", " ", texto)
-    return texto.strip()
+
+    return texto
 
 
-def lista_normalizada(valor):
-    if valor is None:
+def lista_normalizada(texto):
+    """
+    Permite respuestas separadas por:
+    - comas
+    - punto y coma
+    - saltos de línea
+    """
+    if texto is None:
         return []
-    texto = str(valor).strip()
-    if not texto:
-        return []
-    return [normalizar(x) for x in re.split(r"[,;\n]+", texto) if normalizar(x)]
+
+    partes = re.split(r"[,;\n]+", str(texto))
+
+    return [
+        normalizar(p)
+        for p in partes
+        if normalizar(p)
+    ]
 
 
-def exacta(valor, *alternativas):
-    v = normalizar(valor)
-    return bool(v) and any(v == normalizar(x) for x in alternativas)
+def exacta(respuesta, opciones):
+    r = normalizar(respuesta)
+
+    if isinstance(opciones, str):
+        opciones = [opciones]
+
+    return r in [normalizar(x) for x in opciones]
 
 
-def contiene(valor, *alternativas):
-    v = normalizar(valor)
-    return bool(v) and any(normalizar(x) in v for x in alternativas)
+def contiene(respuesta, opciones):
+    r = normalizar(respuesta)
+
+    if isinstance(opciones, str):
+        opciones = [opciones]
+
+    return any(normalizar(x) in r for x in opciones)
 
 
-def repartir_por_criterios(respuesta, criterios):
-    texto = normalizar(respuesta)
-    if not texto or not criterios:
-        return 0.0
-    aciertos = sum(
-        1 for grupo in criterios
-        if any(normalizar(x) in texto for x in grupo)
-    )
-    return aciertos / len(criterios)
+# ============================================================
+# CORRECCIÓN DE COMPRENSIÓN
+# ============================================================
 
+def corregir_comprension(res):
+    puntos = 0.0
 
-def corregir(res):
-    p = {k: 0.0 for k in PESOS}
+    # --------------------------------------------------------
+    # C1 - Lugar
+    # --------------------------------------------------------
 
-    # ---------------------------------------------------------
-    # 1. COMPRENSIÓN = 2,00
-    # ---------------------------------------------------------
-    p["comprension"] += 0.30 * (
-        1 if contiene(
-            res.get("c1", ""),
-            "tren", "vagon", "vagón", "estacion", "estación", "ciudad"
-        ) else 0
-    )
+    r = res.get("c1", "")
 
-    personajes = lista_normalizada(res.get("c2", ""))
-    tiene_viajero = any(
-        x in {
-            "hombre",
-            "hombre joven",
-            "joven",
-            "viajero",
-            "viajero joven"
-        }
-        or "hombre" in x
-        or "viajero" in x
-        for x in personajes
-    )
-    tiene_anciana = any("anciana" in x for x in personajes)
-
-    p["comprension"] += 0.35 * (
-        (int(tiene_viajero) + int(tiene_anciana)) / 2
-    )
-
-    p["comprension"] += 0.35 * (
-        1 if contiene(
-            res.get("c3", ""),
-            "madrugada", "amanecer", "temprano", "noche"
-        ) else 0
-    )
-
-    acciones_respuesta = lista_normalizada(
-        res.get("c4", "")
-    )
-
-    # Acciones válidas del texto.
-    # Se admite que el alumno escriba el verbo conjugado
-    # o su infinitivo.
-    acciones_validas = {
-        "mirar": {"mirar", "miraba"},
-        "sujetar": {"sujetar", "sujetaba"},
-        "dormir": {"dormir", "dormia"},
-        "llegar": {"llegar", "llego"},
-        "bajar": {"bajar", "bajo"},
-        "respirar": {"respirar", "respiro"},
-        "caminar": {"caminar", "camino"},
-        "detenerse": {"detenerse", "se detenia"},
-        "avanzar": {"avanzar", "avanzaba"},
-        "recorrer": {"recorrer", "recorria"},
-        "cubrir": {"cubrir", "cubria"},
-        "ver": {"ver", "veia"},
-        "salir": {"salir", "salio"},
-        "sentir": {"sentir", "sintio"},
-    }
-
-    acciones_encontradas = set()
-
-    for respuesta in acciones_respuesta:
-        for infinitivo, formas in acciones_validas.items():
-            if respuesta in {
-                normalizar(forma)
-                for forma in formas
-            }:
-                acciones_encontradas.add(infinitivo)
-                break
-
-    acciones_unicas = len(acciones_encontradas)
-
-    # C4 vale 0,35 puntos:
-    # 1 acción = 0,12
-    # 2 acciones = 0,23
-    # 3 acciones = 0,35
-    p["comprension"] += min(
-        acciones_unicas,
-        3
-    ) * (0.35 / 3)
-
-    p["comprension"] = min(
-        p["comprension"],
-        2.0
-    )
-
-    # ---------------------------------------------------------
-    # 2. MORFOLOGÍA = 2,50
-    # ---------------------------------------------------------
-    claves = {
-        "m1": {
-            "lexema": ("silenci", "silenc"),
-            "morfemas": ("o",),
-            "estructura": ("simple",),
-            "categoria": (
-                "sustantivo",
-                "comun",
-                "común",
-                "abstracto",
-                "masculino",
-                "singular"
-            ),
-            "vi": ("variable", "v")
-        },
-        "m2": {
-            "lexema": ("lent",),
-            "morfemas": ("a", "mente", "-mente"),
-            "estructura": (
-                "derivada",
-                "derivacion",
-                "derivación"
-            ),
-            "categoria": ("adverbio", "modo"),
-            "vi": ("invariable", "i")
-        },
-        "m3": {
-            "lexema": ("conoc",),
-            "morfemas": ("des", "ido", "-ido"),
-            "estructura": (
-                "derivada",
-                "derivacion",
-                "derivación"
-            ),
-            "categoria": (
-                "adjetivo",
-                "calificativo",
-                "masculino",
-                "singular"
-            ),
-            "vi": ("variable", "v")
-        },
-        "m4": {
-            "lexema": ("mochil",),
-            "morfemas": ("a", "s", "-a", "-s"),
-            "estructura": ("simple",),
-            "categoria": (
-                "sustantivo",
-                "comun",
-                "común",
-                "concreto",
-                "femenino",
-                "plural"
-            ),
-            "vi": ("variable", "v")
-        },
-    }
-
-    campos_peso = {
-        "lexema": 0.10,
-        "morfemas": 0.10,
-        "estructura": 0.10,
-        "categoria": 0.15,
-        "vi": 0.05
-    }
-
-    for mid, campo in claves.items():
-        for nombre, alternativas in campo.items():
-            valor = res.get(f"{mid}_{nombre}", "")
-            v = normalizar(valor)
-            ok = False
-
-            if nombre == "lexema":
-                ok = (
-                    any(normalizar(a) in v for a in alternativas)
-                    and len(v) >= 3
-                )
-
-            elif nombre == "morfemas":
-                partes = lista_normalizada(valor)
-
-                if mid == "m1":
-                    ok = "o" in partes or "o" in v
-
-                elif mid == "m2":
-                    ok = "mente" in v
-
-                elif mid == "m3":
-                    ok = "des" in v and (
-                        "ido" in v or "id" in v
-                    )
-
-                else:
-                    ok = "s" in partes and (
-                        "a" in partes or "a" in v
-                    )
-
-            elif nombre == "categoria":
-                if mid == "m1":
-                    ok = all(
-                        x in v
-                        for x in [
-                            "sustantivo",
-                            "masculino",
-                            "singular"
-                        ]
-                    )
-
-                elif mid == "m2":
-                    ok = "adverbio" in v
-
-                elif mid == "m3":
-                    ok = all(
-                        x in v
-                        for x in [
-                            "adjetivo",
-                            "masculino",
-                            "singular"
-                        ]
-                    )
-
-                else:
-                    ok = all(
-                        x in v
-                        for x in [
-                            "sustantivo",
-                            "femenino",
-                            "plural"
-                        ]
-                    )
-
-            else:
-                ok = any(
-                    v == normalizar(a)
-                    for a in alternativas
-                )
-
-            if ok:
-                p["morfologia"] += campos_peso[nombre]
-
-    for k, correcta in {
-        "dp1": "determinante",
-        "dp2": "determinante",
-        "dp3": "pronombre"
-    }.items():
-
-        if exacta(res.get(k, ""), correcta):
-            p["morfologia"] += 0.1667
-
-    p["morfologia"] = min(
-        round(p["morfologia"], 4),
-        2.5
-    )
-
-    # ---------------------------------------------------------
-    # 3. SEMÁNTICA = 1,00
-    # ---------------------------------------------------------
-    sem_correctas = {
-        "s1": ("antonimia",),
-        "s2": ("campo semantico", "campo semántico"),
-        "s3": ("polisemia",),
-        "s4": ("meronimia", "meronimia"),
-        "s5": ("hiponimos", "hipónimos", "hiponimia"),
-    }
-
-    for k, alternativas in sem_correctas.items():
-        if exacta(res.get(k, ""), *alternativas):
-            p["semantica"] += 0.20
-
-    # ---------------------------------------------------------
-    # 4. TEXTOS + DIÁLOGO = 1,50
-    # ---------------------------------------------------------
-    tipos = {
-        "t1": ("instructivo", "instruccional"),
-        "t2": ("expositivo",),
-        "t3": ("argumentativo", "persuasivo"),
-    }
-
-    for k, alternativas in tipos.items():
-        if exacta(res.get(k, ""), *alternativas):
-            p["textos"] += 0.3333
-
-    interlocutores = lista_normalizada(
-        res.get("d1", "")
-    )
-
-    tiene_lucia = any(
-        "lucia" in x for x in interlocutores
-    )
-    tiene_carlos = any(
-        "carlos" in x for x in interlocutores
-    )
-
-    if tiene_lucia and tiene_carlos:
-        p["textos"] += 0.10
-
-    if exacta(
-        res.get("d2", ""),
-        "6",
-        "seis",
-        "6 intervenciones",
-        "seis intervenciones"
+    if contiene(
+        r,
+        [
+            "tren",
+            "vagon",
+            "vagón",
+            "estacion",
+            "estación",
+            "ciudad"
+        ]
     ):
-        p["textos"] += 0.10
+        puntos += 0.30
 
-    ind = normalizar(res.get("d3", ""))
+    # --------------------------------------------------------
+    # C2 - Personajes
+    # --------------------------------------------------------
 
-    # ESTILO INDIRECTO = 0,30 puntos
-    # 0,10 → verbo introductorio adecuado
-    # 0,10 → nexo "que"
-    # 0,05 → cambio de "ayer" a "el día anterior" / "el día antes"
-    # 0,05 → transformación de "lo hice" a una forma de pluscuamperfecto
+    r = res.get("c2", "")
+    elementos = lista_normalizada(r)
 
-    verbo_introductorio = any(
-        verbo in ind
-        for verbo in [
-            "dijo",
-            "respondio",
-            "contesto",
-            "afirmo",
-            "explico"
-        ]
-    )
-
-    tiene_que = "que" in ind
-
-    cambio_temporal = any(
-        expresion in ind
-        for expresion in [
-            "dia anterior",
-            "dia antes"
-        ]
-    )
-
-    transformacion_verbal = any(
-        expresion in ind
-        for expresion in [
-            "habia hecho",
-            "habia realizado"
-        ]
-    )
-
-    if verbo_introductorio:
-        p["textos"] += 0.10
-
-    if tiene_que:
-        p["textos"] += 0.10
-
-    if cambio_temporal:
-        p["textos"] += 0.05
-
-    if transformacion_verbal:
-        p["textos"] += 0.05
-
-    
-
-     # ---------------------------------------------------------
-    # 5. LITERATURA = 2,00
-    # ---------------------------------------------------------
-    if exacta(res.get("l1", ""), "4"):
-        p["literatura"] += 0.30
-
-    if exacta(res.get("l2", ""), "arte mayor"):
-        p["literatura"] += 0.30
-
-    # MÉTRICA
-    # Se exige exactamente:
-    # 10A 10B 10A 10B
-    #
-    # Se permiten espacios o comas entre los grupos:
-    # 10A 10B 10A 10B
-    # 10A, 10B, 10A, 10B
-    # 10A,10B,10A,10B
-    #
-    # NO se acepta minúscula:
-    # 10a 10b 10a 10b
-    #
-    # NO se normaliza porque las letras deben ser MAYÚSCULAS.
-
-    met = str(res.get("l3", "")).strip()
-
-    # Convertimos comas o punto y coma en espacios.
-    # No modificamos las letras.
-    met = re.sub(r"[,;]+", " ", met)
-
-    # Dejamos un único espacio entre cada grupo.
-    met = re.sub(r"\s+", " ", met).strip()
-
-    if met == "10A 10B 10A 10B":
-        p["literatura"] += 0.35
-
-    # TIPO DE RIMA
-    if exacta(res.get("l4", ""), "consonante"):
-        p["literatura"] += 0.35
-
-        # SINALEFA
-    sinal = normalizar(res.get("l5", ""))
-
-    ok_sinal = (
-        any(
-            x in sinal
-            for x in [
-                "sobre el",
-                "junto al"
-            ]
-        )
-        and any(
-            x in sinal
-            for x in [
-                "sinalefa",
-                "se unen",
-                "se unen las vocales",
-                "union",
-                "unión",
-                "unen"
-            ]
-        )
-    )
-
-    if ok_sinal:
-        p["literatura"] += 0.35
-
-    # PERSONIFICACIÓN
-    pers = normalizar(res.get("l6", ""))
-
-    ok_pers = (
-        "viento susurra" in pers
-        and any(
-            x in pers
-            for x in [
-                "persona",
-                "humana",
-                "humano",
-                "accion humana",
-                "personificacion",
-                "personificación"
-            ]
-        )
-    )
-
-    if ok_pers:
-        p["literatura"] += 0.35
-
-    
-    # ---------------------------------------------------------
-    # 6. SINTAXIS = 1,00
-    # ---------------------------------------------------------
-    syn = {
-        "x1": ("frase",),
-        "x2": ("oracion", "oración"),
-        "x3": ("frase",),
-        "x4": ("frase",),
-        "x5": ("oracion", "oración"),
-        "x6": ("interrogativa",),
-        "x7": ("desiderativa",),
-        "x8": ("exclamativa",),
-        "x9": ("enunciativa",),
-        "x10": ("exhortativa", "imperativa")
-    }
-
-    for k, alternativas in syn.items():
-        if exacta(
-            res.get(k, ""),
-            *alternativas
-        ):
-            p["sintaxis"] += 0.10
-
-    p["sintaxis"] = min(
-        round(p["sintaxis"], 4),
-        1.0
-    )
-
-    total = round(sum(p.values()) * 0.9, 2)
-    return p, total
-
-
-def detectar_ortografia(respuestas):
-    """Detector conservador incorporado, sin dependencias externas."""
-
-    errores = {
-        "sustantibo",
-        "haver",
-        "hechar",
-        "aver",
-        "aora",
-        "havia",
-        "bamos",
-        "llendo",
-        "dijistes",
-        "hicistes",
-        "estava",
-        "tubieron",
-        "tubo"
+    personajes_validos = {
+        "hombre",
+        "hombre joven",
+        "joven",
+        "viajero",
+        "anciana",
+        "mujer",
     }
 
     encontrados = set()
 
-    for respuesta in respuestas:
-        if not respuesta:
-            continue
+    for elemento in elementos:
+        for personaje in personajes_validos:
+            if elemento == personaje:
+                encontrados.add(personaje)
 
-        palabras = re.findall(
-            r"\b[\wáéíóúüñ]+\b",
-            str(respuesta).lower(),
-            flags=re.UNICODE
+    # Se considera correcta si identifica al menos:
+    # hombre/joven/viajero + anciana
+    tiene_hombre = any(
+        x in encontrados
+        for x in ["hombre", "hombre joven", "joven", "viajero"]
+    )
+
+    tiene_anciana = "anciana" in encontrados or "mujer" in encontrados
+
+    if tiene_hombre and tiene_anciana:
+        puntos += 0.35
+    elif tiene_hombre or tiene_anciana:
+        puntos += 0.15
+
+    # --------------------------------------------------------
+    # C3 - Momento del día
+    # --------------------------------------------------------
+
+    r = res.get("c3", "")
+
+    if contiene(
+        r,
+        [
+            "madrugada",
+            "amanecer",
+            "mañana",
+            "mañana temprano",
+            "de madrugada"
+        ]
+    ):
+        puntos += 0.35
+
+    # --------------------------------------------------------
+    # C4 - Tres acciones
+    # --------------------------------------------------------
+
+    r = res.get("c4", "")
+    acciones = lista_normalizada(r)
+
+    acciones_validas = {
+        "mirar",
+        "miraba",
+        "sujetar",
+        "sujetaba",
+        "dormir",
+        "dormia",
+        "llegar",
+        "llego",
+        "bajar",
+        "bajo",
+        "respirar",
+        "respiro",
+        "caminar",
+        "camino",
+        "detenerse",
+        "se detenia",
+        "se detuvo",
+        "avanzar",
+        "avanzaba",
+        "recorrer",
+        "recorria",
+        "cubrir",
+        "cubria",
+        "ver",
+        "veia",
+        "salir",
+        "salio",
+        "sentir",
+        "sintio",
+    }
+
+    acciones_encontradas = []
+
+    for accion in acciones:
+        if accion in acciones_validas:
+            if accion not in acciones_encontradas:
+                acciones_encontradas.append(accion)
+
+    cantidad = min(len(acciones_encontradas), 3)
+
+    if cantidad == 1:
+        puntos += 0.12
+
+    elif cantidad == 2:
+        puntos += 0.24
+
+    elif cantidad >= 3:
+        puntos += 0.35
+
+    return min(round(puntos, 2), 2.0)
+
+
+# ============================================================
+# CORRECCIÓN DE MORFOLOGÍA
+# ============================================================
+
+def corregir_morfologia(res):
+    puntos = 0.0
+
+    criterios = {
+        "m1": {
+            "lexema": ["silenci", "silencio"],
+            "morfemas": ["o"],
+            "estructura": ["simple"],
+            "categoria": ["sustantivo", "masculino", "singular"],
+            "vi": ["v"],
+        },
+        "m2": {
+            "lexema": ["lent"],
+            "morfemas": ["mente"],
+            "estructura": ["derivada"],
+            "categoria": ["adverbio", "modo"],
+            "vi": ["i"],
+        },
+        "m3": {
+            "lexema": ["conoc"],
+            "morfemas": ["des", "ido"],
+            "estructura": ["derivada"],
+            "categoria": ["adjetivo", "masculino", "singular"],
+            "vi": ["v"],
+        },
+        "m4": {
+            "lexema": ["mochil"],
+            "morfemas": ["a+s", "as", "a s"],
+            "estructura": ["simple"],
+            "categoria": ["sustantivo", "femenino", "plural"],
+            "vi": ["v"],
+        },
+    }
+
+    for mid, criterio in criterios.items():
+
+        datos = res.get(mid, {})
+
+        # Cada palabra vale 0,50
+        # Lexema .......... 0,10
+        # Morfemas ........ 0,10
+        # Estructura ...... 0,10
+        # Categoría ....... 0,15
+        # V/I ............. 0,05
+
+        if contiene(
+            datos.get("lexema", ""),
+            criterio["lexema"]
+        ):
+            puntos += 0.10
+
+        if contiene(
+            datos.get("morfemas", ""),
+            criterio["morfemas"]
+        ):
+            puntos += 0.10
+
+        if exacta(
+            datos.get("estructura", ""),
+            criterio["estructura"]
+        ):
+            puntos += 0.10
+
+        categoria = normalizar(
+            datos.get("categoria", "")
         )
 
-        for palabra in palabras:
-            if palabra in errores:
-                encontrados.add(palabra)
+        categoria_correcta = all(
+            normalizar(x) in categoria
+            for x in criterio["categoria"]
+        )
 
-    return len(encontrados), 0
+        if categoria_correcta:
+            puntos += 0.15
+
+        if exacta(
+            datos.get("vi", ""),
+            criterio["vi"]
+        ):
+            puntos += 0.05
+
+    # --------------------------------------------------------
+    # Determinantes y pronombres
+    # --------------------------------------------------------
+
+    dp_correctas = {
+        "dp1": "determinante",
+        "dp2": "determinante",
+        "dp3": "pronombre",
+    }
+
+    for did, correcta in dp_correctas.items():
+
+        if exacta(
+            res.get(did, ""),
+            correcta
+        ):
+            puntos += 0.1667
+
+    return min(round(puntos, 2), 2.5)
 
 
-def guardar_csv(fila):
-    campos = [
-        "name",
-        "group",
-        "date",
-        "comprension",
-        "morfologia",
-        "semantica",
-        "textos",
-        "literatura",
-        "sintaxis",
-        "nota_sin_faltas",
-        "faltas_ortografia",
-        "faltas_tildes",
-        "descuento_ortografia",
-        "nota_examen_9",
-        "produccion_escrita",
-        "nota_produccion_escrita",
-        "nota_final_10",
+# ============================================================
+# CORRECCIÓN DE SEMÁNTICA
+# ============================================================
+
+def corregir_semantica(res):
+    puntos = 0.0
+
+    correctas = {
+        "s1": ["antonimia", "antónimos", "antonimos"],
+        "s2": ["campo semántico", "campo semantico"],
+        "s3": ["polisemia", "polisémica", "polisemica"],
+        "s4": ["meronimia", "meronimia/holonimia"],
+        "s5": ["hiponimia", "hipónimos", "hiponimos"],
+    }
+
+    for sid, opciones in correctas.items():
+
+        if exacta(
+            res.get(sid, ""),
+            opciones
+        ):
+            puntos += 0.20
+
+    return min(round(puntos, 2), 1.0)
+
+
+# ============================================================
+# CORRECCIÓN DE TIPOS DE TEXTO + DIÁLOGO
+# ============================================================
+
+def corregir_textos(res):
+    puntos = 0.0
+
+    correctas = {
+        "t1": [
+            "instructivo",
+            "instruccional",
+        ],
+        "t2": [
+            "expositivo",
+        ],
+        "t3": [
+            "argumentativo",
+            "persuasivo",
+        ],
+    }
+
+    for tid, opciones in correctas.items():
+
+        if exacta(
+            res.get(tid, ""),
+            opciones
+        ):
+            puntos += 0.3333
+
+    # --------------------------------------------------------
+    # Diálogo
+    # --------------------------------------------------------
+
+    # D1 - Interlocutores
+    interlocutores = lista_normalizada(
+        res.get("d1", "")
+    )
+
+    tiene_lucia = "lucia" in interlocutores
+    tiene_carlos = "carlos" in interlocutores
+
+    if tiene_lucia and tiene_carlos:
+        puntos += 0.10
+
+    # D2 - Número de intervenciones
+    if exacta(
+        res.get("d2", ""),
+        [
+            "6",
+            "seis",
+            "6 intervenciones",
+            "seis intervenciones"
+        ]
+    ):
+        puntos += 0.10
+
+    # D3 - Estilo indirecto
+    r = res.get("d3", "")
+    rn = normalizar(r)
+
+    d3 = 0.0
+
+    # Verbo introductorio
+    if contiene(
+        rn,
+        [
+            "dijo",
+            "respondio",
+            "contesto",
+            "afirmo",
+            "explico",
+        ]
+    ):
+        d3 += 0.10
+
+    # Que
+    if " que " in f" {rn} ":
+        d3 += 0.10
+
+    # Cambio temporal
+    if contiene(
+        rn,
+        [
+            "dia anterior",
+            "dia antes",
+            "tarde anterior",
+            "dia previo",
+        ]
+    ):
+        d3 += 0.05
+
+    # Cambio verbal
+    if contiene(
+        rn,
+        [
+            "habia hecho",
+            "habia realizado",
+        ]
+    ):
+        d3 += 0.05
+
+    puntos += d3
+
+    # IMPORTANTE:
+    # El bloque completo de textos + diálogo
+    # nunca puede superar 1,5 puntos.
+    return min(round(puntos, 2), 1.5)
+
+
+# ============================================================
+# CORRECCIÓN DE LITERATURA
+# ============================================================
+
+def corregir_literatura(res):
+    puntos = 0.0
+
+    # --------------------------------------------------------
+    # L1 - Número de versos
+    # --------------------------------------------------------
+
+    if exacta(
+        res.get("l1", ""),
+        ["4", "cuatro", "4 versos", "cuatro versos"]
+    ):
+        puntos += 0.30
+
+    # --------------------------------------------------------
+    # L2 - Arte mayor / menor
+    # --------------------------------------------------------
+
+    if exacta(
+        res.get("l2", ""),
+        [
+            "arte mayor",
+            "mayor",
+        ]
+    ):
+        puntos += 0.30
+
+    # --------------------------------------------------------
+    # L3 - Esquema métrico
+    #
+    # Acepta:
+    # 10A 10B 10A 10B
+    # 10A, 10B, 10A, 10B
+    # 10A; 10B; 10A; 10B
+    #
+    # A y B deben aparecer en mayúscula.
+    # --------------------------------------------------------
+
+    esquema = res.get("l3", "")
+
+    esquema_limpio = re.sub(
+        r"[\s,;|/-]+",
+        " ",
+        str(esquema).strip()
+    )
+
+    esquema_limpio = re.sub(
+        r"\s+",
+        " ",
+        esquema_limpio
+    )
+
+    if esquema_limpio == "10A 10B 10A 10B":
+        puntos += 0.35
+
+    # --------------------------------------------------------
+    # L4 - Rima
+    # --------------------------------------------------------
+
+    if exacta(
+        res.get("l4", ""),
+        [
+            "consonante",
+        ]
+    ):
+        puntos += 0.35
+
+    # --------------------------------------------------------
+    # L5 - Sinalefa
+    # --------------------------------------------------------
+
+    r = normalizar(
+        res.get("l5", "")
+    )
+
+    palabras_sinalefa = [
+        "sobre el",
+        "junto al",
     ]
 
-    if os.path.exists(CSV_FILE):
-        try:
-            df = pd.read_csv(CSV_FILE)
-        except Exception:
-            df = pd.DataFrame(columns=campos)
-    else:
-        df = pd.DataFrame(columns=campos)
+    explica_sinalefa = [
+        "sinalefa",
+        "se unen",
+        "union",
+        "unión",
+    ]
 
-    for c in campos:
-        if c not in df.columns:
-            df[c] = ""
-
-    df = pd.concat(
-        [
-            df[campos],
-            pd.DataFrame(
-                [{c: fila.get(c, "") for c in campos}]
-            )
-        ],
-        ignore_index=True
+    tiene_palabras = any(
+        normalizar(x) in r
+        for x in palabras_sinalefa
     )
 
-    df.to_csv(
+    tiene_explicacion = any(
+        normalizar(x) in r
+        for x in explica_sinalefa
+    )
+
+    if tiene_palabras and tiene_explicacion:
+        puntos += 0.35
+
+    # --------------------------------------------------------
+    # L6 - Personificación
+    # --------------------------------------------------------
+
+    r = normalizar(
+        res.get("l6", "")
+    )
+
+    tiene_expresion = (
+        "viento susurra" in r
+    )
+
+    tiene_personificacion = any(
+        x in r
+        for x in [
+            "personificacion",
+            "personificación",
+            "persona",
+            "humana",
+            "humano",
+        ]
+    )
+
+    if tiene_expresion and tiene_personificacion:
+        puntos += 0.35
+
+    return min(round(puntos, 2), 2.0)
+
+
+# ============================================================
+# CORRECCIÓN DE SINTAXIS
+# ============================================================
+
+def corregir_sintaxis(res):
+    """
+    NEE:
+    3 preguntas de frase/oración
+    3 preguntas de modalidad
+
+    Las seis juntas valen 1 punto.
+    Por tanto:
+        1 respuesta correcta = 0,1667
+    """
+
+    puntos = 0.0
+
+    correctas = {
+        "x1": ["frase"],
+        "x2": ["oracion", "oración"],
+        "x5": ["oracion", "oración"],
+        "x6": ["interrogativa"],
+        "x8": ["exclamativa"],
+        "x9": ["enunciativa"],
+    }
+
+    for xid, opciones in correctas.items():
+
+        if exacta(
+            res.get(xid, ""),
+            opciones
+        ):
+            puntos += 1 / 6
+
+    return min(round(puntos, 2), 1.0)
+
+
+# ============================================================
+# CORRECCIÓN GENERAL
+# ============================================================
+
+def corregir(res):
+
+    p = {}
+
+    p["comprension"] = corregir_comprension(res)
+    p["morfologia"] = corregir_morfologia(res)
+    p["semantica"] = corregir_semantica(res)
+    p["textos"] = corregir_textos(res)
+    p["literatura"] = corregir_literatura(res)
+    p["sintaxis"] = corregir_sintaxis(res)
+
+    # Los apartados suman 10 puntos automáticos.
+    total_automatico_sobre_10 = sum(p.values())
+
+    # El examen automático equivale a 9 puntos.
+    total_automatico = round(
+        total_automatico_sobre_10 * 0.9,
+        2
+    )
+
+    # Seguridad: nunca más de 9.
+    total_automatico = min(
+        total_automatico,
+        9.0
+    )
+
+    return p, total_automatico
+
+
+# ============================================================
+# PRODUCCIÓN ESCRITA
+# ============================================================
+
+def corregir_produccion(texto):
+
+    """
+    La producción escrita vale 1 punto.
+
+    No se añade una pregunta o tema nuevo.
+    Se valora únicamente la extensión de la respuesta.
+    """
+
+    palabras = normalizar(
+        texto
+    ).split()
+
+    n = len(palabras)
+
+    if n == 0:
+        return 0.0
+
+    if n < 5:
+        return 0.25
+
+    if n < 10:
+        return 0.50
+
+    if n < 20:
+        return 0.75
+
+    return 1.0
+
+
+# ============================================================
+# ORTOGRAFÍA
+# ============================================================
+
+def detectar_ortografia(texto):
+
+    texto = str(texto or "")
+
+    faltas_ortografia = 0
+    faltas_tildes = 0
+
+    # Errores muy evidentes que queremos detectar.
+    errores = [
+        r"\bavia\b",
+        r"\bhabia\b",
+        r"\bahi\b",
+        r"\btambien\b",
+        r"\bdespues\b",
+        r"\bmas\b",
+    ]
+
+    texto_normalizado = normalizar(texto)
+
+    for patron in errores:
+        if re.search(patron, texto_normalizado):
+            faltas_tildes += 1
+
+    return faltas_ortografia, faltas_tildes
+
+
+# ============================================================
+# CSV
+# ============================================================
+
+def guardar_csv(fila):
+
+    columnas = list(fila.keys())
+
+    existe = os.path.exists(CSV_FILE)
+
+    with open(
         CSV_FILE,
-        index=False,
+        "a",
+        newline="",
         encoding="utf-8-sig"
-    )
+    ) as f:
 
+        writer = csv.DictWriter(
+            f,
+            fieldnames=columnas
+        )
+
+        if not existe:
+            writer.writeheader()
+
+        writer.writerow(fila)
+
+
+# ============================================================
+# CSV INDIVIDUAL
+# ============================================================
 
 def csv_individual(fila):
-    salida = io.StringIO()
 
-    campos = list(fila.keys())
+    output = io.StringIO()
 
     writer = csv.DictWriter(
-        salida,
-        fieldnames=campos
+        output,
+        fieldnames=list(fila.keys())
     )
 
     writer.writeheader()
     writer.writerow(fila)
 
-    return salida.getvalue().encode("utf-8-sig")
+    return output.getvalue().encode(
+        "utf-8-sig"
+    )
 
-def excel_individual(fila, respuestas, perfil):
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment
+
+# ============================================================
+# EXCEL INDIVIDUAL
+# ============================================================
+
+def excel_individual(fila, puntos, respuestas):
 
     wb = Workbook()
 
-    # ---------------------------------------------------------
-    # HOJA 1: RESULTADO
-    # ---------------------------------------------------------
     ws = wb.active
     ws.title = "Resultado"
 
-    ws["A1"] = "📚 Evaluación inicial de Lengua — 2.º ESO"
-    ws["A1"].font = Font(bold=True, size=16)
+    ws.append([
+        "Alumno",
+        fila.get("nombre", "")
+    ])
 
-    ws["A3"] = "Alumno"
-    ws["B3"] = fila["name"]
+    ws.append([
+        "Grupo",
+        fila.get("grupo", "")
+    ])
 
-    ws["A4"] = "Grupo"
-    ws["B4"] = fila["group"]
+    ws.append([
+        "Fecha",
+        fila.get("fecha", "")
+    ])
 
-    ws["A5"] = "Fecha y hora"
-    ws["B5"] = fila["date"]
+    ws.append([])
 
-    # ---------------------------------------------------------
-    # NOTAS
-    # ---------------------------------------------------------
-    ws["A7"] = "NOTA DE ESTA PARTE (SOBRE 9)"
-    ws["B7"] = fila["nota_examen_9"]
+    ws.append([
+        "Apartado",
+        "Puntuación"
+    ])
 
-    ws["A8"] = "Nota antes del descuento por ortografía (sobre 9)"
-    ws["B8"] = fila["nota_sin_faltas"]
+    for clave, nombre in NOMBRES.items():
+        ws.append([
+            nombre,
+            puntos.get(clave, 0)
+        ])
 
-    ws["A9"] = "Descuento por ortografía"
-    ws["B9"] = fila["descuento_ortografia"]
+    ws.append([])
 
-    ws["A10"] = "Producción escrita"
-    ws["B10"] = fila["produccion_escrita"]
+    ws.append([
+        "Automático / 9",
+        fila.get("nota_automatica", 0)
+    ])
 
-    ws["A11"] = "Nota producción escrita (hasta 1 punto)"
-    ws["B11"] = fila["nota_produccion_escrita"]
+    ws.append([
+        "Producción / 1",
+        fila.get("produccion", 0)
+    ])
 
-    ws["A12"] = "NOTA FINAL (SOBRE 10)"
-    ws["B12"] = fila["nota_final_10"]
+    ws.append([
+        "Nota final / 10",
+        fila.get("nota_final", 0)
+    ])
 
-    # ---------------------------------------------------------
-    # RESULTADOS POR ÁREAS
-    # ---------------------------------------------------------
-    ws["A14"] = "RESULTADOS POR ÁREAS"
-    ws["A14"].font = Font(bold=True)
+    ws.append([])
 
-    fila_excel = 15
+    ws.append([
+        "Respuestas"
+    ])
 
-    for clave, nombre_area in NOMBRES.items():
-        ws.cell(fila_excel, 1).value = nombre_area
-        ws.cell(fila_excel, 2).value = fila[clave]
-        fila_excel += 1
+    for clave, valor in respuestas.items():
 
-    # ---------------------------------------------------------
-    # PERFIL COMPETENCIAL
-    # ---------------------------------------------------------
-    ws[f"A{fila_excel + 1}"] = "PERFIL COMPETENCIAL"
-    ws[f"A{fila_excel + 1}"].font = Font(bold=True)
+        if isinstance(valor, dict):
+            ws.append([
+                clave,
+                str(valor)
+            ])
+        else:
+            ws.append([
+                clave,
+                str(valor)
+            ])
 
-    fila_perfil = fila_excel + 2
+    output = io.BytesIO()
 
-    for item in perfil:
-        ws.cell(fila_perfil, 1).value = item["texto"]
-        ws.cell(fila_perfil, 1).alignment = Alignment(
-            wrap_text=True,
-            vertical="top"
-        )
-        fila_perfil += 1
+    wb.save(output)
 
-    ws.column_dimensions["A"].width = 48
-    ws.column_dimensions["B"].width = 30
+    output.seek(0)
 
-    # ---------------------------------------------------------
-    # HOJA 2: RESPUESTAS
-    # ---------------------------------------------------------
-    ws2 = wb.create_sheet("Respuestas")
+    return output.getvalue()
 
-    ws2["A1"] = "Pregunta"
-    ws2["B1"] = "Respuesta"
 
-    ws2["A1"].font = Font(bold=True)
-    ws2["B1"].font = Font(bold=True)
-
-    fila_respuesta = 2
-
-    for pregunta, respuesta in respuestas.items():
-        ws2.cell(fila_respuesta, 1).value = pregunta
-        ws2.cell(fila_respuesta, 2).value = str(respuesta)
-        ws2.cell(fila_respuesta, 2).alignment = Alignment(
-            wrap_text=True,
-            vertical="top"
-        )
-        fila_respuesta += 1
-
-    ws2.column_dimensions["A"].width = 25
-    ws2.column_dimensions["B"].width = 80
-
-    # ---------------------------------------------------------
-    # GUARDAR EN MEMORIA
-    # ---------------------------------------------------------
-    salida = io.BytesIO()
-    wb.save(salida)
-    salida.seek(0)
-
-    return salida.getvalue()
+# ============================================================
+# LECTURA SEGURA DE RESULTADOS
+# ============================================================
 
 def safe_read_results():
+
     if not os.path.exists(CSV_FILE):
-        return pd.DataFrame(
-            columns=[
-                "name",
-                "group",
-                "date",
-                "comprension",
-                "morfologia",
-                "semantica",
-                "textos",
-                "literatura",
-                "sintaxis",
-                "nota_sin_faltas",
-                "faltas_ortografia",
-                "faltas_tildes",
-                "descuento_ortografia",
-                "nota_final"
-            ]
-        )
+        return pd.DataFrame()
 
     try:
-        return pd.read_csv(CSV_FILE)
+        df = pd.read_csv(
+            CSV_FILE,
+            encoding="utf-8-sig"
+        )
+
+        return df
+
     except Exception:
         return pd.DataFrame()
 
+
+# ============================================================
+# COMPROBAR SI YA HA REALIZADO EL EXAMEN
+# ============================================================
+
 def alumno_ya_realizo_examen(nombre, grupo):
+
     df = safe_read_results()
 
     if df.empty:
         return False
 
-    if "name" not in df.columns or "group" not in df.columns:
+    if "nombre" not in df.columns:
         return False
 
-    nombre_normalizado = normalizar(nombre)
+    if "grupo" not in df.columns:
+        return False
 
-    return (
-        df["name"].astype(str).map(normalizar).eq(nombre_normalizado)
-        & df["group"].astype(str).eq(grupo)
-    ).any()
+    nombre_n = normalizar(nombre)
+    grupo_n = normalizar(grupo)
+
+    for _, fila in df.iterrows():
+
+        if (
+            normalizar(fila.get("nombre", "")) == nombre_n
+            and
+            normalizar(fila.get("grupo", "")) == grupo_n
+        ):
+            return True
+
+    return False
 
 
-   
-    
+# ============================================================
+# CSS
+# ============================================================
 
-# =========================================================
-# PANTALLA DE RESULTADOS TRAS ENVIAR
-# =========================================================
+st.markdown(
+    """
+    <style>
+
+    html, body, [class*="css"] {
+        font-family: "Atkinson Hyperlegible", Arial, sans-serif;
+    }
+
+    .main .block-container {
+        max-width: 900px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+
+    p, li, label {
+        font-size: 20px !important;
+        line-height: 1.55 !important;
+    }
+
+    h1 {
+        font-size: 34px !important;
+    }
+
+    h2 {
+        font-size: 29px !important;
+    }
+
+    h3 {
+        font-size: 25px !important;
+    }
+
+    .stTextInput input,
+    .stTextArea textarea,
+    .stSelectbox div[data-baseweb="select"] {
+        font-size: 19px !important;
+    }
+
+    .bloque {
+        padding: 1.2rem;
+        border-radius: 12px;
+        margin-top: 1rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #cccccc;
+    }
+
+    .poema {
+        font-size: 23px;
+        line-height: 1.8;
+        padding: 1rem;
+        border-left: 4px solid #777;
+        margin: 1rem 0;
+    }
+
+    .dialogo {
+        font-size: 21px;
+        line-height: 1.7;
+        padding: 1rem;
+        border: 1px solid #cccccc;
+        border-radius: 10px;
+        margin: 1rem 0;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# ============================================================
+# PANTALLA DE RESULTADOS
+# ============================================================
 
 if st.session_state.examen_enviado:
 
     fila = st.session_state.resultado_fila
+    puntos = st.session_state.resultado_perfil
     respuestas = st.session_state.resultado_respuestas
-    perfil = st.session_state.resultado_perfil
 
-    st.title("📊 Resultados de tu evaluación")
+    st.title("📚 Resultado de la evaluación")
 
-    st.success("✅ Esta parte de la evaluación se ha enviado correctamente.")
-    
-    st.info(
-        "✍️ **IMPORTANTE:** Has terminado esta parte de la evaluación. "
-        "Esta prueba automática vale **9 puntos**. "
-        "Ahora debes continuar con la **producción escrita**, que se corregirá aparte "
-        "y supondrá hasta **1 punto adicional**."
-    )
-    
-    st.write(f"**Fecha y hora:** {fila['date']}")
-    st.metric("Nota de esta parte", f"{fila['nota_examen_9']:.2f} / 9")
-    st.write(
-        f"**Nota antes del descuento por ortografía:** "
-        f"{fila['nota_sin_faltas']:.2f} / 9"
+    st.success("La evaluación se ha guardado correctamente.")
+
+    nota_automatica = float(
+        fila.get("nota_automatica", 0)
     )
 
-    st.divider()
+    produccion = float(
+        fila.get("produccion", 0)
+    )
 
-    st.subheader("📚 Resultados por áreas")
+    nota_final = float(
+        fila.get("nota_final", 0)
+    )
 
-    columnas = st.columns(2)
+    st.metric(
+        "Puntuación automática",
+        f"{nota_automatica:.2f} / 9"
+    )
 
-    for i, (clave, nombre_area) in enumerate(NOMBRES.items()):
+    st.metric(
+        "Producción escrita",
+        f"{produccion:.2f} / 1"
+    )
 
-        with columnas[i % 2]:
+    st.metric(
+        "Nota final",
+        f"{nota_final:.2f} / 10"
+    )
 
-            st.metric(
-                nombre_area,
-                f"{fila[clave]:.2f} / 10"
+    st.markdown("---")
+
+    st.subheader("📊 Resultados por apartados")
+
+    datos_grafico = {
+        clave: puntos.get(clave, 0)
+        for clave in NOMBRES
+    }
+
+    try:
+        fig = radar_chart(datos_grafico)
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+    except Exception:
+        pass
+
+    for clave, nombre in NOMBRES.items():
+
+        valor = float(
+            puntos.get(clave, 0)
+        )
+
+        maximo = PESOS[clave]
+
+        porcentaje = (
+            valor / maximo * 100
+            if maximo
+            else 0
+        )
+
+        st.write(
+            f"**{nombre}:** "
+            f"{valor:.2f} / {maximo:.1f}"
+        )
+
+        st.progress(
+            min(
+                max(porcentaje / 100, 0),
+                1
             )
+        )
 
-    st.divider()
+    st.markdown("---")
 
-    st.subheader("📝 Perfil de aprendizaje")
+    # --------------------------------------------------------
+    # ORTOGRAFÍA
+    # --------------------------------------------------------
 
-    for item in perfil:
-        st.write(f"• {item['texto']}")
-
-    st.divider()
-
-    st.subheader("📥 Descargar resultados")
-
-    st.download_button(
-        "📄 Descargar CSV",
-        data=st.session_state.resultado_csv,
-        file_name=f"resultado_{fila['name']}.csv",
-        mime="text/csv",
-        use_container_width=True
+    faltas_ortografia = int(
+        fila.get("faltas_ortografia", 0)
     )
 
-    st.download_button(
-        "📊 Descargar Excel",
-        data=st.session_state.resultado_excel,
-        file_name=f"resultado_{fila['name']}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
+    faltas_tildes = int(
+        fila.get("faltas_tildes", 0)
     )
 
-    st.divider()
+    st.subheader("✏️ Ortografía")
 
-    st.subheader("📊 Comparación con la clase")
+    st.write(
+        f"Errores ortográficos detectados: "
+        f"**{faltas_ortografia}**"
+    )
 
-    df = safe_read_results()
+    st.write(
+        f"Errores de tildes detectados: "
+        f"**{faltas_tildes}**"
+    )
 
-    if not df.empty:
+    st.info(
+        "Los errores ortográficos se registran "
+        "para la evaluación, pero no restan puntos "
+        "de la nota automática."
+    )
 
-        df_clase = df[
-            df["group"] == fila["group"]
-        ].copy()
+    st.markdown("---")
 
-        if not df_clase.empty:
+    # --------------------------------------------------------
+    # COMPARATIVA ANÓNIMA
+    # --------------------------------------------------------
 
-            # Ocultar completamente los nombres
-            df_anon = df_clase.copy()
+    st.subheader("📊 Estadísticas del grupo")
 
-            df_anon["name"] = [
+    df_resultados = safe_read_results()
+
+    if not df_resultados.empty:
+
+        # Nunca mostramos nombres reales.
+        df_comparativa = df_resultados.copy()
+
+        if "nota_final" in df_comparativa.columns:
+
+            df_comparativa = df_comparativa[
+                ["nota_final"]
+            ].copy()
+
+            df_comparativa["Alumno"] = [
                 f"Alumno {i + 1}"
-                for i in range(len(df_anon))
+                for i in range(
+                    len(df_comparativa)
+                )
             ]
 
-            fila_anonima = df_anon.iloc[-1]
+            df_comparativa = df_comparativa[
+                ["Alumno", "nota_final"]
+            ]
 
-            figura = comparativa(
-                fila_anonima,
-                df_anon
+            df_comparativa = df_comparativa.rename(
+                columns={
+                    "nota_final": "Nota"
+                }
             )
 
-            if figura is not None:
+            st.dataframe(
+                df_comparativa,
+                use_container_width=True,
+                hide_index=True
+            )
+
+            try:
+                fig_comp = comparativa(
+                    df_comparativa
+                )
+
                 st.plotly_chart(
-                    figura,
+                    fig_comp,
                     use_container_width=True
                 )
 
-    st.success(
-        "Tu evaluación está lista para descargar y entregar en Classroom."
-    )
+            except Exception:
+                pass
+
+    # --------------------------------------------------------
+    # DESCARGAS
+    # --------------------------------------------------------
+
+    st.markdown("---")
+
+    st.subheader("📥 Descargar resultado")
+
+    if st.session_state.resultado_excel:
+
+        st.download_button(
+            label="📊 Descargar Excel",
+            data=st.session_state.resultado_excel,
+            file_name="resultado_evaluacion_2ESO_NEE.xlsx",
+            mime=(
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
+            )
+        )
+
+    if st.session_state.resultado_csv:
+
+        st.download_button(
+            label="📄 Descargar CSV",
+            data=st.session_state.resultado_csv,
+            file_name="resultado_evaluacion_2ESO_NEE.csv",
+            mime="text/csv"
+        )
 
     st.stop()
 
-# =========================================================
+
+# ============================================================
 # CABECERA
-# =========================================================
-st.title("📚 Evaluación inicial de Lengua — 2.º ESO")
-st.caption("Lengua Castellana y Literatura · Curso 2026-2027")
+# ============================================================
 
+st.title("📚 Evaluación Inicial de Lengua Castellana")
+st.header("2.º ESO — Adaptación NEE")
 
-# =========================================================
-# DATOS
-# =========================================================
-nombre = st.text_input("Nombre y apellidos")
-
-grupo = st.selectbox(
-    "Grupo",
-    ["", "2º A", "2º B", "2º C", "2º D"]
+st.write(
+    "Completa todas las actividades con calma. "
+    "Lee bien cada pregunta antes de responder."
 )
 
 
-# =========================================================
-# EXAMEN
-# =========================================================
-examen_bloqueado = False
+# ============================================================
+# DATOS DEL ALUMNO
+# ============================================================
 
-if nombre.strip() and grupo:
-    examen_bloqueado = alumno_ya_realizo_examen(
-        nombre,
-        grupo
-    )
+st.markdown("---")
+st.header("Datos del alumno")
 
-if examen_bloqueado:
-    st.warning(
-        "⚠️ Este examen ya ha sido realizado con este nombre y grupo. "
-        "No puedes volver a enviarlo."
-    )
-    st.stop()
+nombre = st.text_input(
+    "Nombre y apellidos"
+)
+
+grupo = st.selectbox(
+    "Grupo",
+    [
+        "",
+        "2º A",
+        "2º B",
+        "2º C",
+        "2º D",
+    ]
+)
 
 
-with st.form("examen"):
+# ============================================================
+# FORMULARIO
+# ============================================================
+
+with st.form("examen_form"):
+
     respuestas = {}
 
-    st.header("1. Comprensión lectora — 2 puntos")
+    # ========================================================
+    # 1. COMPRENSIÓN LECTORA
+    # ========================================================
+
+    st.markdown("---")
+    st.header("1. Comprensión lectora")
+
+    st.markdown(
+        f"""
+        <div class="bloque">
+        {EXAM["comprension"]["texto"].replace(chr(10), "<br><br>")}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    preguntas_comp = EXAM[
+        "comprension"
+    ][
+        "preguntas"
+    ]
+
+    for pregunta in preguntas_comp:
+
+        st.markdown(
+            pregunta["enunciado"],
+            unsafe_allow_html=True
+        )
+
+        respuestas[pregunta["id"]] = st.text_input(
+            "Respuesta",
+            key=f"resp_{pregunta['id']}"
+        )
+
+    # ========================================================
+    # 2. MORFOLOGÍA
+    # ========================================================
+
+    st.markdown("---")
+    st.header("2. Morfología")
 
     st.write(
-        EXAM["comprension"]["texto"]
+        "Analiza las siguientes palabras."
     )
 
-    respuestas["c1"] = st.text_input(
-        "1.1. Lugar"
-    )
+    respuestas["morfologia"] = {}
 
-    respuestas["c2"] = st.text_input(
-        "1.1. Personajes, separados por comas",
-        help="Ejemplo: hombre joven, anciana"
-    )
+    estructuras = [
+        "",
+        "Simple",
+        "Derivada",
+    ]
 
-    respuestas["c3"] = st.text_input(
-        "1.1. Momento del día"
-    )
-
-    respuestas["c4"] = st.text_input(
-        "1.2. Tres acciones, separadas por comas",
-        help="Ejemplo: miraba, bajó, caminó"
-    )
-
-    st.divider()
-
-    st.header(
-        "2. Morfología y categorías gramaticales — 2,5 puntos"
-    )
+    vi_opciones = [
+        "",
+        "V",
+        "I",
+    ]
 
     for palabra in EXAM["morfologia"]:
 
-        st.subheader(
-            palabra["palabra"]
+        mid = palabra["id"]
+
+        st.markdown(
+            f"<h3>{palabra['palabra']}</h3>",
+            unsafe_allow_html=True
         )
 
-        for campo in palabra["campos"]:
+        respuestas["morfologia"][mid] = {}
 
-            clave = (
-                campo
-                .lower()
-                .replace(" ", "_")
-                .replace("/", "_")
-            )
+        respuestas["morfologia"][mid][
+            "lexema"
+        ] = st.text_input(
+            "Lexema",
+            key=f"{mid}_lexema"
+        )
 
-            key = f"{palabra['id']}_{clave}"
+        respuestas["morfologia"][mid][
+            "morfemas"
+        ] = st.text_input(
+            "Morfemas",
+            key=f"{mid}_morfemas"
+        )
 
-            if campo == "Estructura":
+        respuestas["morfologia"][mid][
+            "estructura"
+        ] = st.selectbox(
+            "Estructura",
+            estructuras,
+            key=f"{mid}_estructura"
+        )
 
-                valor = st.selectbox(
-                    f"{palabra['palabra']} → {campo}",
-                    [
-                        "",
-                        "simple",
-                        "compuesta",
-                        "derivada",
-                        "parasintética"
-                    ],
-                    key=key
-                )
+        respuestas["morfologia"][mid][
+            "categoria"
+        ] = st.text_input(
+            "Categoría gramatical",
+            key=f"{mid}_categoria"
+        )
 
-            elif campo == "V/I":
+        respuestas["morfologia"][mid][
+            "vi"
+        ] = st.selectbox(
+            "V / I",
+            vi_opciones,
+            key=f"{mid}_vi"
+        )
 
-                valor = st.selectbox(
-                    f"{palabra['palabra']} → {campo}",
-                    [
-                        "",
-                        "variable",
-                        "invariable"
-                    ],
-                    key=key
-                )
-
-            elif campo == "Categoría gramatical":
-
-                valor = st.text_input(
-                    f"{palabra['palabra']} → {campo}",
-                    key=key,
-                    help="Indica categoría y rasgos principales."
-                )
-
-            else:
-
-                valor = st.text_input(
-                    f"{palabra['palabra']} → {campo}",
-                    key=key,
-                    help="Si hay varios morfemas, sepáralos con comas. Ejemplo: in, s"
-                    if campo == "Morfemas"
-                    else None
-                )
-
-            respuestas[
-                f"{palabra['id']}_{clave}"
-            ] = valor
+    # ========================================================
+    # DETERMINANTES Y PRONOMBRES
+    # ========================================================
 
     st.subheader(
-        "2.2. Determinantes y pronombres — incluido en Morfología"
+        "2.2. Determinantes y pronombres"
     )
 
-    for q in EXAM["determinantes_pronombres"]:
-
-        respuestas[q["id"]] = st.selectbox(
-            q["frase"] + " — " + q["enunciado"],
-            [
-                "",
-                "determinante",
-                "pronombre"
-            ],
-            key=q["id"]
-        )
-
-    st.divider()
-
-    st.header(
-        "3. Semántica — 1 punto"
-    )
-
-    opciones_sem = [
+    dp_opciones = [
         "",
-        "antonimia",
-        "sinonimia",
-        "campo semántico",
-        "polisemia",
-        "homonimia",
-        "meronimia",
-        "hipónimos",
-        "hiperónimo"
+        "Determinante",
+        "Pronombre",
     ]
 
-    for q in EXAM["semantica"]:
-
-        respuestas[q["id"]] = st.selectbox(
-            q["enunciado"],
-            opciones_sem,
-            key=q["id"]
-        )
-
-    st.divider()
-
-    st.header(
-        "4. Textos y diálogo — 1,5 puntos"
-    )
-
-    st.write(
-        EXAM["textos"]["enunciado"]
-    )
-
-    for letra, texto in EXAM["textos"]["textos"].items():
+    for pregunta in EXAM[
+        "determinantes_pronombres"
+    ]:
 
         st.markdown(
-            f"**Texto {letra}:** {texto}"
+            pregunta["frase"],
+            unsafe_allow_html=True
         )
 
-    opciones_texto = [
+        st.markdown(
+            pregunta["enunciado"],
+            unsafe_allow_html=True
+        )
+
+        respuestas[
+            pregunta["id"]
+        ] = st.selectbox(
+            "Respuesta",
+            dp_opciones,
+            key=f"resp_{pregunta['id']}"
+        )
+
+    # ========================================================
+    # 3. SEMÁNTICA
+    # ========================================================
+
+    st.markdown("---")
+    st.header("3. Semántica")
+
+    semantica_opciones = [
         "",
-        "instructivo",
-        "narrativo",
-        "descriptivo",
-        "expositivo",
-        "argumentativo",
-        "dialogado"
+        "Antonimia",
+        "Campo semántico",
+        "Polisemia",
+        "Meronimia",
+        "Hiponimia",
     ]
 
-    for q in EXAM["textos"]["preguntas"]:
-
-        respuestas[q["id"]] = st.selectbox(
-            q["enunciado"],
-            opciones_texto,
-            key=q["id"]
-        )
-
-    st.subheader("Diálogo")
-
-    for linea in EXAM["dialogo"]["texto"].splitlines():
+    for pregunta in EXAM["semantica"]:
 
         st.markdown(
-            f"**{linea}**"
+            pregunta["enunciado"],
+            unsafe_allow_html=True
         )
 
-    respuestas["d1"] = st.text_input(
-        EXAM["dialogo"]["preguntas"][0]["enunciado"],
-        help="Escribe los dos personajes separados por comas."
-    )
+        respuestas[
+            pregunta["id"]
+        ] = st.selectbox(
+            "Relación semántica",
+            semantica_opciones,
+            key=f"resp_{pregunta['id']}"
+        )
 
-    respuestas["d2"] = st.number_input(
-        EXAM["dialogo"]["preguntas"][1]["enunciado"],
-        min_value=0,
-        max_value=20,
-        value=0,
-        step=1
-    )
+    # ========================================================
+    # 4. TIPOS DE TEXTO
+    # ========================================================
 
-    respuestas["d2"] = str(
-        int(respuestas["d2"])
-    )
+    st.markdown("---")
+    st.header("4. Tipos de texto")
 
-    respuestas["d3"] = st.text_area(
-        EXAM["dialogo"]["preguntas"][2]["enunciado"]
-    )
-
-    st.divider()
-
-    st.header(
-        "5. Literatura — 2 puntos"
+    st.markdown(
+        EXAM["textos"]["enunciado"],
+        unsafe_allow_html=True
     )
 
     st.markdown(
-        EXAM["literatura"]["poema"].replace(
-            "\n",
-            "  \n"
+        """
+        <div class="bloque">
+        <strong>Texto A</strong><br>
+        Apaga el horno y deja reposar la masa durante diez minutos antes de usarla.
+        <br><br>
+        <strong>Texto B</strong><br>
+        Los mamíferos son animales vertebrados que alimentan a sus crías con leche.
+        <br><br>
+        <strong>Texto C</strong><br>
+        Reciclar ayuda a reducir la contaminación y cuidar el medio ambiente.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    tipo_texto_opciones = [
+        "",
+        "Instructivo",
+        "Expositivo",
+        "Argumentativo",
+    ]
+
+    for pregunta in EXAM[
+        "textos"
+    ][
+        "preguntas"
+    ]:
+
+        st.markdown(
+            pregunta["enunciado"],
+            unsafe_allow_html=True
         )
+
+        respuestas[
+            pregunta["id"]
+        ] = st.selectbox(
+            "Tipo de texto",
+            tipo_texto_opciones,
+            key=f"resp_{pregunta['id']}"
+        )
+
+    # ========================================================
+    # 5. LITERATURA
+    # ========================================================
+
+    st.markdown("---")
+    st.header("5. Literatura")
+
+    st.markdown(
+        "Lee el poema.",
+        unsafe_allow_html=True
+    )
+
+    poema_html = (
+        EXAM["literatura"]["poema"]
+        .replace("\n", "<br>")
+    )
+
+    st.markdown(
+        f"""
+        <div class="poema">
+        {poema_html}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    preguntas_lit = EXAM[
+        "literatura"
+    ][
+        "preguntas"
+    ]
+
+    # L1
+    st.markdown(
+        preguntas_lit[0]["enunciado"],
+        unsafe_allow_html=True
     )
 
     respuestas["l1"] = st.selectbox(
-        EXAM["literatura"]["preguntas"][0]["enunciado"],
-        [
-            "",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8"
-        ],
-        key="l1"
+        "Número de versos",
+        ["", "4", "3", "5"],
+        key="resp_l1"
+    )
+
+    # L2
+    st.markdown(
+        preguntas_lit[1]["enunciado"],
+        unsafe_allow_html=True
     )
 
     respuestas["l2"] = st.selectbox(
-        EXAM["literatura"]["preguntas"][1]["enunciado"],
+        "Arte mayor o menor",
         [
             "",
-            "arte menor",
-            "arte mayor"
+            "Arte mayor",
+            "Arte menor",
         ],
-        key="l2"
+        key="resp_l2"
+    )
+
+    # L3
+    st.markdown(
+        preguntas_lit[2]["enunciado"],
+        unsafe_allow_html=True
     )
 
     respuestas["l3"] = st.text_input(
-        EXAM["literatura"]["preguntas"][2]["enunciado"],
-        help="Ejemplo: 14A 11B 14B 10A. Puedes separar los grupos con espacios o comas"
+        "Esquema métrico",
+        key="resp_l3",
+        placeholder="Ejemplo: 10A 10B 10A 10B"
+    )
+
+    # L4
+    st.markdown(
+        preguntas_lit[3]["enunciado"],
+        unsafe_allow_html=True
     )
 
     respuestas["l4"] = st.selectbox(
-        EXAM["literatura"]["preguntas"][3]["enunciado"],
+        "Tipo de rima",
         [
             "",
-            "asonante",
-            "consonante"
+            "Consonante",
+            "Asonante",
         ],
-        key="l4"
+        key="resp_l4"
+    )
+
+    # L5
+    st.markdown(
+        preguntas_lit[4]["enunciado"],
+        unsafe_allow_html=True
     )
 
     respuestas["l5"] = st.text_input(
-        EXAM["literatura"]["preguntas"][4]["enunciado"]
+        "Sinalefa",
+        key="resp_l5"
+    )
+
+    # L6
+    st.markdown(
+        preguntas_lit[5]["enunciado"],
+        unsafe_allow_html=True
     )
 
     respuestas["l6"] = st.text_area(
-        EXAM["literatura"]["preguntas"][5]["enunciado"]
+        "Personificación",
+        key="resp_l6"
     )
 
-    st.divider()
+    # ========================================================
+    # 6. SINTAXIS
+    # ========================================================
 
-    st.header(
-        "6. Sintaxis — 1 punto"
-    )
+    st.markdown("---")
+    st.header("6. Sintaxis")
 
     st.subheader(
         "6.1. Frase u oración"
     )
 
-    for q in EXAM["sintaxis"][:5]:
+    # IMPORTANTE:
+    # NEE tiene exactamente 3 aquí:
+    # x1, x2, x5
+    #
+    # No usamos [:5] porque el examen NEE
+    # solo tiene 6 preguntas.
 
-        respuestas[q["id"]] = st.selectbox(
-            f"**{q['frase']}** → {q['enunciado']}",
+    for pregunta in EXAM["sintaxis"][:3]:
+
+        st.markdown(
+            f"<strong>{pregunta['frase']}</strong>",
+            unsafe_allow_html=True
+        )
+
+        respuestas[
+            pregunta["id"]
+        ] = st.selectbox(
+            "Respuesta",
             [
                 "",
-                "frase",
-                "oración"
+                "Frase",
+                "Oración",
             ],
-            key=q["id"]
+            key=f"resp_{pregunta['id']}"
         )
 
     st.subheader(
         "6.2. Modalidad oracional"
     )
 
-    for q in EXAM["sintaxis"][5:]:
+    # Las 3 restantes:
+    # x6, x8, x9
 
-        respuestas[q["id"]] = st.selectbox(
-            f"**{q['frase']}** → {q['enunciado']}",
-            [
-                "",
-                "enunciativa",
-                "interrogativa",
-                "exclamativa",
-                "desiderativa",
-                "exhortativa",
-                "imperativa"
-            ],
-            key=q["id"]
+    modalidades = [
+        "",
+        "Enunciativa",
+        "Interrogativa",
+        "Exclamativa",
+        "Desiderativa",
+        "Exhortativa",
+    ]
+
+    for pregunta in EXAM["sintaxis"][3:]:
+
+        st.markdown(
+            f"<strong>{pregunta['frase']}</strong>",
+            unsafe_allow_html=True
         )
 
-    enviar = st.form_submit_button(
-        "📤 ENVIAR EXAMEN",
+        respuestas[
+            pregunta["id"]
+        ] = st.selectbox(
+            "Modalidad",
+            modalidades,
+            key=f"resp_{pregunta['id']}"
+        )
+
+    # ========================================================
+    # 7. DIÁLOGO
+    # ========================================================
+
+    st.markdown("---")
+    st.header("7. Diálogo")
+
+    dialogo_html = (
+        EXAM["dialogo"]["texto"]
+        .replace("\n", "<br>")
+    )
+
+    st.markdown(
+        f"""
+        <div class="dialogo">
+        {dialogo_html}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    preguntas_dialogo = EXAM[
+        "dialogo"
+    ][
+        "preguntas"
+    ]
+
+    # D1
+    st.markdown(
+        preguntas_dialogo[0]["enunciado"],
+        unsafe_allow_html=True
+    )
+
+    respuestas["d1"] = st.text_input(
+        "Interlocutores",
+        key="resp_d1",
+        placeholder="Ejemplo: Lucía, Carlos"
+    )
+
+    # D2
+    st.markdown(
+        preguntas_dialogo[1]["enunciado"],
+        unsafe_allow_html=True
+    )
+
+    respuestas["d2"] = st.text_input(
+        "Número",
+        key="resp_d2"
+    )
+
+    # D3
+    st.markdown(
+        preguntas_dialogo[2]["enunciado"],
+        unsafe_allow_html=True
+    )
+
+    respuestas["d3"] = st.text_area(
+        "Respuesta",
+        key="resp_d3"
+    )
+
+    # ========================================================
+    # 8. PRODUCCIÓN ESCRITA
+    # ========================================================
+
+    st.markdown("---")
+    st.header("8. Producción escrita — 1 punto")
+
+    st.text_area(
+        "Respuesta",
+        key="produccion"
+    )
+
+    # ========================================================
+    # ENVÍO
+    # ========================================================
+
+    st.markdown("---")
+
+    enviado = st.form_submit_button(
+        "✅ Entregar evaluación",
         use_container_width=True
     )
 
 
-# =========================================================
-# CORRECCIÓN Y RESULTADOS
-# =========================================================
-if enviar:
+# ============================================================
+# PROCESAR ENVÍO
+# ============================================================
+
+if enviado:
+
+    # --------------------------------------------------------
+    # Comprobar datos
+    # --------------------------------------------------------
 
     if not nombre.strip():
-        st.error("Escribe tu nombre y apellidos.")
+
+        st.error(
+            "Escribe tu nombre y apellidos antes de entregar."
+        )
+
         st.stop()
 
     if not grupo:
-        st.error("Selecciona tu grupo.")
+
+        st.error(
+            "Selecciona tu grupo antes de entregar."
+        )
+
         st.stop()
 
-    puntos, nota_sin_faltas = corregir(respuestas)
+    # --------------------------------------------------------
+    # Evitar duplicados
+    # --------------------------------------------------------
 
-    todas_respuestas = [
-        v
-        for v in respuestas.values()
-        if isinstance(v, str)
-    ]
+    if alumno_ya_realizo_examen(
+        nombre,
+        grupo
+    ):
 
-    faltas_ortografia, faltas_tildes = detectar_ortografia(
-        todas_respuestas
+        st.error(
+            "Ya existe una evaluación registrada "
+            "con ese nombre y grupo."
+        )
+
+        st.stop()
+
+    # --------------------------------------------------------
+    # Preparar respuestas para corrección
+    # --------------------------------------------------------
+
+    respuestas_correccion = {}
+
+    # Comprensión
+    for pregunta in EXAM[
+        "comprension"
+    ][
+        "preguntas"
+    ]:
+
+        respuestas_correccion[
+            pregunta["id"]
+        ] = respuestas.get(
+            pregunta["id"],
+            ""
+        )
+
+    # Morfología
+    for mid, datos in respuestas.get(
+        "morfologia",
+        {}
+    ).items():
+
+        respuestas_correccion[mid] = datos
+
+    # DP
+    for pregunta in EXAM[
+        "determinantes_pronombres"
+    ]:
+
+        did = pregunta["id"]
+
+        respuestas_correccion[did] = (
+            respuestas.get(did, "")
+        )
+
+    # Semántica
+    for pregunta in EXAM["semantica"]:
+
+        sid = pregunta["id"]
+
+        respuestas_correccion[sid] = (
+            respuestas.get(sid, "")
+        )
+
+    # Textos
+    for pregunta in EXAM[
+        "textos"
+    ][
+        "preguntas"
+    ]:
+
+        tid = pregunta["id"]
+
+        respuestas_correccion[tid] = (
+            respuestas.get(tid, "")
+        )
+
+    # Literatura
+    for pregunta in EXAM[
+        "literatura"
+    ][
+        "preguntas"
+    ]:
+
+        lid = pregunta["id"]
+
+        respuestas_correccion[lid] = (
+            respuestas.get(lid, "")
+        )
+
+    # Sintaxis
+    for pregunta in EXAM["sintaxis"]:
+
+        xid = pregunta["id"]
+
+        respuestas_correccion[xid] = (
+            respuestas.get(xid, "")
+        )
+
+    # Diálogo
+    for pregunta in EXAM[
+        "dialogo"
+    ][
+        "preguntas"
+    ]:
+
+        did = pregunta["id"]
+
+        respuestas_correccion[did] = (
+            respuestas.get(did, "")
+        )
+
+    # --------------------------------------------------------
+    # Corrección
+    # --------------------------------------------------------
+
+    puntos, nota_automatica = corregir(
+        respuestas_correccion
     )
 
-    descuento = round(
-        min(
-            2.0,
-            faltas_ortografia * 0.20
-            + faltas_tildes * 0.10
-        ),
-        2
+    # --------------------------------------------------------
+    # Producción
+    # --------------------------------------------------------
+
+    texto_produccion = st.session_state.get(
+        "produccion",
+        ""
     )
+
+    produccion = corregir_produccion(
+        texto_produccion
+    )
+
+    # --------------------------------------------------------
+    # Ortografía
+    # --------------------------------------------------------
+
+    texto_para_ortografia = " ".join(
+        str(x)
+        for x in respuestas_correccion.values()
+        if not isinstance(x, dict)
+    )
+
+    texto_para_ortografia += " "
+    texto_para_ortografia += texto_produccion
+
+    faltas_ortografia, faltas_tildes = (
+        detectar_ortografia(
+            texto_para_ortografia
+        )
+    )
+
+    # --------------------------------------------------------
+    # IMPORTANTE:
+    # NO se descuenta ortografía.
+    # --------------------------------------------------------
 
     nota_final = round(
-        max(
-            0.0,
-            nota_sin_faltas - descuento
-        ),
+        nota_automatica + produccion,
         2
     )
 
-    scores = {
-        "comprension": round(
-            puntos["comprension"] / 2.0 * 10,
-            2
-        ),
-        "morfologia": round(
-            puntos["morfologia"] / 2.5 * 10,
-            2
-        ),
-        "semantica": round(
-            puntos["semantica"] / 1.0 * 10,
-            2
-        ),
-        "textos": round(
-            puntos["textos"] / 1.5 * 10,
-            2
-        ),
-        "literatura": round(
-            puntos["literatura"] / 2.0 * 10,
-            2
-        ),
-        "sintaxis": round(
-            puntos["sintaxis"] / 1.0 * 10,
-            2
-        ),
-    }
+    nota_final = min(
+        nota_final,
+        10.0
+    )
 
-    fecha_hora = datetime.now().strftime(
+    # --------------------------------------------------------
+    # Fecha
+    # --------------------------------------------------------
+
+    fecha = datetime.now().strftime(
         "%Y-%m-%d %H:%M:%S"
     )
 
+    # --------------------------------------------------------
+    # Fila para CSV
+    # --------------------------------------------------------
+
     fila = {
-        "name": nombre.strip(),
-        "group": grupo,
-        "date": fecha_hora,
-        **scores,
-        "nota_sin_faltas": nota_sin_faltas,
+        "nombre": nombre.strip(),
+        "grupo": grupo,
+        "fecha": fecha,
+
+        "comprension": puntos["comprension"],
+        "morfologia": puntos["morfologia"],
+        "semantica": puntos["semantica"],
+        "textos": puntos["textos"],
+        "literatura": puntos["literatura"],
+        "sintaxis": puntos["sintaxis"],
+
+        "nota_automatica": nota_automatica,
+        "produccion": produccion,
+        "nota_final": nota_final,
+
         "faltas_ortografia": faltas_ortografia,
         "faltas_tildes": faltas_tildes,
-        "descuento_ortografia": descuento,
-        "nota_examen_9": nota_final,
-        "produccion_escrita": "",
-        "nota_produccion_escrita": "",
-        "nota_final_10": "",
     }
+
+    # --------------------------------------------------------
+    # Guardar
+    # --------------------------------------------------------
 
     guardar_csv(fila)
 
-    # ---------------------------------------------------------
-    # PERFIL COMPETENCIAL
-    # ---------------------------------------------------------
-    perfil = generar_perfil(scores)
-    st.session_state.examen_enviado = True
-    st.session_state.resultado_fila = fila
-    st.session_state.resultado_respuestas = respuestas
-    st.session_state.resultado_perfil = perfil
-    
-    st.session_state.resultado_excel = excel_individual(
+    # --------------------------------------------------------
+    # Archivos descargables
+    # --------------------------------------------------------
+
+    excel_bytes = excel_individual(
         fila,
-        respuestas,
-        perfil
+        puntos,
+        respuestas_correccion
     )
-    
-    st.session_state.resultado_csv = csv_individual(
+
+    csv_bytes = csv_individual(
         fila
     )
-    
-    st.rerun()
 
-    # ---------------------------------------------------------
-  
+    # --------------------------------------------------------
+    # Guardar estado
+    # --------------------------------------------------------
+
+    st.session_state.resultado_fila = fila
+
+    st.session_state.resultado_perfil = puntos
+
+    st.session_state.resultado_respuestas = (
+        respuestas_correccion
+    )
+
+    st.session_state.resultado_excel = (
+        excel_bytes
+    )
+
+    st.session_state.resultado_csv = (
+        csv_bytes
+    )
+
+    st.session_state.examen_enviado = True
+
+    st.rerun()
