@@ -1099,7 +1099,10 @@ with st.form("examen"):
 
                 valor = st.text_input(
                     f"{palabra['palabra']} → {campo}",
-                    key=key
+                    key=key,
+                    help="Si hay varios morfemas, sepáralos con comas. Ejemplo: in, s"
+                    if campo == "Morfemas"
+                    else None
                 )
 
             respuestas[
