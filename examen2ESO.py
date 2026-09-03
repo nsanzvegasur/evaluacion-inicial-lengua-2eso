@@ -75,13 +75,13 @@ El viajero sintió que aquel día iba a ser el primero de su nueva vida, que tod
             ]
         },
         "literatura": {
-            "poema":"""La luna ríe sobre la ciudad,
-
-            el viento juega junto a la ventana,
+            "poema":"""La luna brilla sobre el mar,
             
-            el sol despierta y me hace mirar,
+            las estrellas danzan en el cielo,
             
-            la mañana escribe una carta.""",
+            el viento susurra junto al mar,
+            
+            y la noche se cubre de hielo..""",
             
             "preguntas": [
                 {"id": "l1", "enunciado": "5.1. Número de versos"},
