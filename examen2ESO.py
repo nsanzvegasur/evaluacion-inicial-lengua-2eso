@@ -5,7 +5,9 @@ EXAMEN = {
 
 En uno de los vagones, un hombre joven miraba por la ventana sin hablar. Sujetaba una mochila y parecía cansado. A su lado, una anciana dormía profundamente. El silencio dentro del vagón era extraño, como si todos evitaran mirarse.
 
-Cuando el tren llegó a la estación final, la luz del amanecer comenzó a aparecer entre los edificios. El viajero bajó lentamente, respiró hondo y caminó sin prisa hacia la salida.""",
+Cuando el tren llegó a la estación final, la luz del amanecer comenzó a aparecer entre los edificios. El viajero bajó lentamente, respiró hondo y caminó sin prisa hacia la salida. La anciana nunca salió de aquel tren.
+
+El viajero sintió que aquel día iba a ser el primero de su nueva vida, que todo había cambiado, que era un inicio donde no podía cometer los mismos errores. Aquella ciudad nueva era un enorme conjunto de posibilidades preparada para ser explotada.""",
             "preguntas": [
                 {
                     "id": "c1",
