@@ -7,6 +7,7 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
+from openpyxl import Workbook
 
 from examen2ESO import EXAMEN
 from analytics import radar_chart, comparativa, generar_perfil
@@ -84,7 +85,7 @@ def corregir(res):
     p = {k: 0.0 for k in PESOS}
 
     # ---------------------------------------------------------
-    # 1. COMPRENSIÓN = 2,00
+    # 1. COMPRENSIÓN = 1,00
     # ---------------------------------------------------------
     p["comprension"] += 0.30 * (
         1 if contiene(
@@ -635,7 +636,79 @@ def safe_read_results():
     except Exception:
         return pd.DataFrame()
 
+def alumno_ya_realizo_examen(nombre, grupo):
+    df = safe_read_results()
 
+    if df.empty:
+        return False
+
+    if "name" not in df.columns or "group" not in df.columns:
+        return False
+
+    nombre_normalizado = normalizar(nombre)
+
+    return (
+        df["name"].astype(str).map(normalizar).eq(nombre_normalizado)
+        & df["group"].astype(str).eq(grupo)
+    ).any()
+
+
+def generar_excel_alumno(fila, respuestas):
+    wb = Workbook()
+
+    # ---------------------------------------------------------
+    # HOJA 1: RESULTADO
+    # ---------------------------------------------------------
+    ws_resultado = wb.active
+    ws_resultado.title = "Resultado"
+
+    resultado = [
+        ("Nombre", fila["name"]),
+        ("Grupo", fila["group"]),
+        ("Fecha", fila["date"]),
+        ("Nota final", fila["nota_final"]),
+        ("Nota sin faltas", fila["nota_sin_faltas"]),
+        ("Comprensión", fila["comprension"]),
+        ("Morfología", fila["morfologia"]),
+        ("Semántica", fila["semantica"]),
+        ("Textos", fila["textos"]),
+        ("Literatura", fila["literatura"]),
+        ("Sintaxis", fila["sintaxis"]),
+        ("Faltas de ortografía", fila["faltas_ortografia"]),
+        ("Faltas de tildes", fila["faltas_tildes"]),
+        ("Descuento por ortografía", fila["descuento_ortografia"]),
+    ]
+
+    ws_resultado.append(["Dato", "Resultado"])
+
+    for dato, valor in resultado:
+        ws_resultado.append([dato, valor])
+
+    # ---------------------------------------------------------
+    # HOJA 2: RESPUESTAS
+    # ---------------------------------------------------------
+    ws_respuestas = wb.create_sheet("Respuestas")
+
+    ws_respuestas.append(["Pregunta", "Respuesta"])
+
+    for pregunta, respuesta in respuestas.items():
+        ws_respuestas.append([
+            pregunta,
+            str(respuesta)
+        ])
+
+    # Ajustar ancho de columnas
+    for ws in [ws_resultado, ws_respuestas]:
+        ws.column_dimensions["A"].width = 30
+        ws.column_dimensions["B"].width = 80
+
+    # Guardar en memoria
+    salida = io.BytesIO()
+    wb.save(salida)
+    salida.seek(0)
+
+    return salida.getvalue()
+    
 # =========================================================
 # CABECERA
 # =========================================================
@@ -657,6 +730,22 @@ grupo = st.selectbox(
 # =========================================================
 # EXAMEN
 # =========================================================
+examen_bloqueado = False
+
+if nombre.strip() and grupo:
+    examen_bloqueado = alumno_ya_realizo_examen(
+        nombre,
+        grupo
+    )
+
+if examen_bloqueado:
+    st.warning(
+        "⚠️ Este examen ya ha sido realizado con este nombre y grupo. "
+        "No puedes volver a enviarlo."
+    )
+    st.stop()
+
+
 with st.form("examen"):
     respuestas = {}
 
@@ -1056,7 +1145,12 @@ if enviar:
     }
 
     guardar_csv(fila)
-
+    
+    excel_alumno = generar_excel_alumno(
+        fila,
+        respuestas
+    )
+    
     st.success(
         "✅ Examen corregido y guardado correctamente."
     )
@@ -1122,6 +1216,20 @@ if enviar:
         use_container_width=True
     )
 
+
+    nombre_archivo_excel = (
+    f"Evaluacion_2ESO_"
+    f"{re.sub(r'[^A-Za-z0-9_-]+', '_', nombre.strip())}.xlsx"
+    )
+    
+    st.download_button(
+        "📊 Descargar mi resultado en Excel",
+        data=excel_alumno,
+        file_name=nombre_archivo_excel,
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True,
+    )
+    
     st.download_button(
         "⬇️ Descargar mi resultado CSV",
         data=csv_individual(fila),
