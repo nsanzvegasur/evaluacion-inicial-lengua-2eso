@@ -580,7 +580,10 @@ def guardar_csv(fila):
         "faltas_ortografia",
         "faltas_tildes",
         "descuento_ortografia",
-        "nota_final"
+        nota_examen_9
+        produccion_escrita
+        nota_produccion_escrita
+        nota_final_10
     ]
 
     if os.path.exists(CSV_FILE):
