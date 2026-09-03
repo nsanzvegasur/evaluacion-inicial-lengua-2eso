@@ -75,10 +75,14 @@ El viajero sintió que aquel día iba a ser el primero de su nueva vida, que tod
             ]
         },
         "literatura": {
-            "poema": """La lluvia cae suave en la ciudad,
-las calles brillan bajo la farola,
-y el viento juega solo en la escuela
-como si todo fuera soledad.""",
+            "poema":"""La luna ríe sobre la ciudad,
+
+            el viento juega junto a la ventana,
+            
+            el sol despierta y me hace mirar,
+            
+            la mañana escribe una carta.""",
+            
             "preguntas": [
                 {"id": "l1", "enunciado": "5.1. Número de versos"},
                 {"id": "l2", "enunciado": "5.2. ¿Arte mayor o menor?"},
