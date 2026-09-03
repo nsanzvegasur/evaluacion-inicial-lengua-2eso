@@ -923,10 +923,12 @@ if st.session_state.examen_enviado:
 
             fila_anonima = df_anon.iloc[-1]
 
-            figura = comparativa(
-                fila_anonima,
-                df_anon
-            )
+            try:
+                figura = comparativa(fila_anonima, df_anon)
+                if figura is not None:
+                    st.plotly_chart(figura, use_container_width=True)
+            except Exception:
+                st.info("La comparativa no está disponible en este momento.")
 
             if figura is not None:
                 st.plotly_chart(
