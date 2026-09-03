@@ -829,8 +829,6 @@ if st.session_state.examen_enviado:
 
     st.title("📊 Resultados de tu evaluación")
 
-    st.success("✅ Evaluación enviada correctamente.")
-
     st.success("✅ Esta parte de la evaluación se ha enviado correctamente.")
     
     st.info(
