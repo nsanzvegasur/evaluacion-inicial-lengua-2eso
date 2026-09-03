@@ -19,6 +19,25 @@ st.set_page_config(
 )
 
 CSV_FILE = "results.csv"
+
+if "examen_enviado" not in st.session_state:
+    st.session_state.examen_enviado = False
+
+if "resultado_fila" not in st.session_state:
+    st.session_state.resultado_fila = None
+
+if "resultado_respuestas" not in st.session_state:
+    st.session_state.resultado_respuestas = None
+
+if "resultado_perfil" not in st.session_state:
+    st.session_state.resultado_perfil = None
+
+if "resultado_excel" not in st.session_state:
+    st.session_state.resultado_excel = None
+
+if "resultado_csv" not in st.session_state:
+    st.session_state.resultado_csv = None
+
 EXAM = EXAMEN["2ESO"]
 
 # Puntuación final = 10 puntos exactos.
@@ -745,9 +764,6 @@ def alumno_ya_realizo_examen(nombre, grupo):
     ).any()
 
 
-def generar_excel_alumno(fila, respuestas):
-    wb = Workbook()
-
     # ---------------------------------------------------------
     # HOJA 1: RESULTADO
     # ---------------------------------------------------------
@@ -801,6 +817,116 @@ def generar_excel_alumno(fila, respuestas):
 
     return salida.getvalue()
     
+
+# =========================================================
+# PANTALLA DE RESULTADOS TRAS ENVIAR
+# =========================================================
+
+if st.session_state.examen_enviado:
+
+    fila = st.session_state.resultado_fila
+    respuestas = st.session_state.resultado_respuestas
+    perfil = st.session_state.resultado_perfil
+
+    st.title("📊 Resultados de tu evaluación")
+
+    st.success("✅ Evaluación enviada correctamente.")
+
+    st.write(f"**Fecha y hora:** {fila['date']}")
+
+    st.metric(
+        "Nota final",
+        f"{fila['nota_final']:.2f} / 10"
+    )
+
+    st.write(
+        f"**Nota antes del descuento por ortografía:** "
+        f"{fila['nota_sin_faltas']:.2f} / 10"
+    )
+
+    st.divider()
+
+    st.subheader("📚 Resultados por áreas")
+
+    columnas = st.columns(2)
+
+    for i, (clave, nombre_area) in enumerate(NOMBRES.items()):
+
+        with columnas[i % 2]:
+
+            st.metric(
+                nombre_area,
+                f"{fila[clave]:.2f} / 10"
+            )
+
+    st.divider()
+
+    st.subheader("📝 Perfil de aprendizaje")
+
+    for item in perfil:
+        st.write(f"• {item['texto']}")
+
+    st.divider()
+
+    st.subheader("📥 Descargar resultados")
+
+    st.download_button(
+        "📄 Descargar CSV",
+        data=st.session_state.resultado_csv,
+        file_name=f"resultado_{fila['name']}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+
+    st.download_button(
+        "📊 Descargar Excel",
+        data=st.session_state.resultado_excel,
+        file_name=f"resultado_{fila['name']}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True
+    )
+
+    st.divider()
+
+    st.subheader("📊 Comparación con la clase")
+
+    df = safe_read_results()
+
+    if not df.empty:
+
+        df_clase = df[
+            df["group"] == fila["group"]
+        ].copy()
+
+        if not df_clase.empty:
+
+            # Ocultar completamente los nombres
+            df_anon = df_clase.copy()
+
+            df_anon["name"] = [
+                f"Alumno {i + 1}"
+                for i in range(len(df_anon))
+            ]
+
+            fila_anonima = df_anon.iloc[-1]
+
+            figura = comparativa(
+                fila_anonima,
+                df_anon
+            )
+
+            if figura is not None:
+                st.plotly_chart(
+                    figura,
+                    use_container_width=True
+                )
+
+    st.success(
+        "Tu evaluación está lista para descargar y entregar en Classroom."
+    )
+
+    st.stop()
+
 # =========================================================
 # CABECERA
 # =========================================================
@@ -1238,144 +1364,22 @@ if enviar:
     # PERFIL COMPETENCIAL
     # ---------------------------------------------------------
     perfil = generar_perfil(scores)
-
-    # ---------------------------------------------------------
-    # PANTALLA DE RESULTADOS
-    # ---------------------------------------------------------
-    st.success(
-        "✅ Examen enviado correctamente."
+    st.session_state.examen_enviado = True
+    st.session_state.resultado_fila = fila
+    st.session_state.resultado_respuestas = respuestas
+    st.session_state.resultado_perfil = perfil
+    
+    st.session_state.resultado_excel = excel_individual(
+        fila,
+        respuestas,
+        perfil
     )
-
-    st.header("📚 Resultado de tu evaluación")
-
-    st.write(
-        f"**Fecha y hora:** {fecha_hora}"
+    
+    st.session_state.resultado_csv = csv_individual(
+        fila
     )
-
-    st.metric(
-        "NOTA FINAL",
-        f"{nota_final:.2f}/10"
-    )
-
-    st.write(
-        f"**Nota sin faltas de ortografía:** "
-        f"{nota_sin_faltas:.2f}/10"
-    )
-
-    st.write(
-        f"**Descuento por faltas:** -{descuento:.2f}"
-    )
+    
+    st.rerun()
 
     # ---------------------------------------------------------
-    # RESULTADOS POR ÁREAS
-    # ---------------------------------------------------------
-    st.subheader("Resultado por áreas")
-
-    cols = st.columns(3)
-
-    for i, c in enumerate([
-        "comprension",
-        "morfologia",
-        "semantica",
-        "textos",
-        "literatura",
-        "sintaxis"
-    ]):
-
-        cols[i % 3].metric(
-            NOMBRES[c],
-            f"{scores[c]:.2f}/10"
-        )
-
-    # ---------------------------------------------------------
-    # PERFIL COMPETENCIAL EN TEXTO
-    # ---------------------------------------------------------
-    st.subheader("🧠 Perfil competencial")
-
-    for item in perfil:
-        st.write(item["texto"])
-
-    # ---------------------------------------------------------
-    # DESCARGAS
-    # ---------------------------------------------------------
-    st.subheader("📥 Descarga tu evaluación")
-
-    st.info(
-        "Descarga tu evaluación y súbela a Classroom."
-    )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.download_button(
-            "⬇️ Descargar CSV",
-            data=csv_individual(fila),
-            file_name=(
-                f"Resultado_2ESO_"
-                f"{re.sub(r'[^A-Za-z0-9_-]+', '_', nombre.strip())}.csv"
-            ),
-            mime="text/csv",
-            use_container_width=True,
-        )
-
-    with col2:
-        st.download_button(
-            "⬇️ Descargar Excel",
-            data=excel_individual(
-                fila,
-                respuestas,
-                perfil
-            ),
-            file_name=(
-                f"Evaluacion_2ESO_"
-                f"{re.sub(r'[^A-Za-z0-9_-]+', '_', nombre.strip())}.xlsx"
-            ),
-            mime=(
-                "application/vnd.openxmlformats-officedocument."
-                "spreadsheetml.sheet"
-            ),
-            use_container_width=True,
-        )
-
-    # ---------------------------------------------------------
-    # COMPARACIÓN ANÓNIMA CON LA CLASE
-    # ---------------------------------------------------------
-    st.divider()
-
-    st.subheader("📊 Comparación con la clase")
-
-    df = safe_read_results()
-
-    if not df.empty:
-
-        df_clase = df[
-            df["group"] == grupo
-        ].copy()
-
-        if not df_clase.empty:
-
-            # Nombres completamente anónimos
-            df_anon = df_clase.copy()
-
-            df_anon["name"] = [
-                f"Alumno {i + 1}"
-                for i in range(len(df_anon))
-            ]
-
-            fila_anonima = df_anon.iloc[-1]
-
-            figura = comparativa(
-                fila_anonima,
-                df_anon
-            )
-
-            if figura is not None:
-                st.plotly_chart(
-                    figura,
-                    use_container_width=True
-                )
-
-    st.success(
-        "Tu evaluación está lista para descargar y entregar en Classroom."
-    )
-
+  
