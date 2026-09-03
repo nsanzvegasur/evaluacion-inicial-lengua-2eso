@@ -1,3 +1,14 @@
+import streamlit as st
+
+st.set_page_config(
+    page_title="Evaluación Inicial Lengua 2.º ESO NEE",
+    page_icon="📚",
+    layout="centered"
+)
+
+st.title("PRUEBA — LA APP HA ARRANCADO")
+
+
 import csv
 import io
 import os
