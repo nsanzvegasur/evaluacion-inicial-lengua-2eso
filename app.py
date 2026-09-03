@@ -139,32 +139,56 @@ def corregir(res):
         ) else 0
     )
 
-    acciones_texto = normalizar(res.get("c4", ""))
+    acciones_respuesta = lista_normalizada(
+        res.get("c4", "")
+    )
 
-    acciones = [
-        ("mirar", "miraba", "mirando"),
-        ("sujetar", "sujetaba", "sujeta"),
-        ("dormir", "dormia", "dormía"),
-        ("llegar", "llego", "llegó"),
-        ("bajar", "bajo", "bajó"),
-        ("respirar", "respiro", "respiró"),
-        ("caminar", "camino", "caminó"),
-        ("detenerse", "se detenia", "se detenía"),
-        ("avanzar", "avanzaba", "avanzar"),
-        ("recorrer", "recorria", "recorría"),
-        ("cubrir", "cubria", "cubría"),
-    ]
+    # Acciones válidas del texto.
+    # Se admite que el alumno escriba el verbo conjugado
+    # o su infinitivo.
+    acciones_validas = {
+        "mirar": {"mirar", "miraba"},
+        "sujetar": {"sujetar", "sujetaba"},
+        "dormir": {"dormir", "dormia"},
+        "llegar": {"llegar", "llego"},
+        "bajar": {"bajar", "bajo"},
+        "respirar": {"respirar", "respiro"},
+        "caminar": {"caminar", "camino"},
+        "detenerse": {"detenerse", "se detenia"},
+        "avanzar": {"avanzar", "avanzaba"},
+        "recorrer": {"recorrer", "recorria"},
+        "cubrir": {"cubrir", "cubria"},
+        "ver": {"ver", "veia"},
+        "salir": {"salir", "salio"},
+        "sentir": {"sentir", "sintio"},
+    }
 
-    acciones_encontradas = []
+    acciones_encontradas = set()
 
-    for grupo in acciones:
-        if any(normalizar(a) in acciones_texto for a in grupo):
-            acciones_encontradas.append(grupo[0])
+    for respuesta in acciones_respuesta:
+        for infinitivo, formas in acciones_validas.items():
+            if respuesta in {
+                normalizar(forma)
+                for forma in formas
+            }:
+                acciones_encontradas.add(infinitivo)
+                break
 
-    acciones_unicas = len(set(acciones_encontradas))
+    acciones_unicas = len(acciones_encontradas)
 
-    p["comprension"] += 0.3333 * min(acciones_unicas, 3)
-    p["comprension"] = min(p["comprension"], 2.0)
+    # C4 vale 0,35 puntos:
+    # 1 acción = 0,12
+    # 2 acciones = 0,23
+    # 3 acciones = 0,35
+    p["comprension"] += min(
+        acciones_unicas,
+        3
+    ) * (0.35 / 3)
+
+    p["comprension"] = min(
+        p["comprension"],
+        2.0
+    )
 
     # ---------------------------------------------------------
     # 2. MORFOLOGÍA = 2,50
