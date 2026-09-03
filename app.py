@@ -460,6 +460,10 @@ def corregir(res):
     if met == "10A 10B 10A 10B":
         p["literatura"] += 0.35
 
+    # TIPO DE RIMA
+    if exacta(res.get("l4", ""), "consonante"):
+        p["literatura"] += 0.35
+
     # SINALEFA
     sinal = normalizar(res.get("l5", ""))
 
