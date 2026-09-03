@@ -104,7 +104,7 @@ def corregir(res):
     p = {k: 0.0 for k in PESOS}
 
     # ---------------------------------------------------------
-    # 1. COMPRENSIÓN = 1,00
+    # 1. COMPRENSIÓN = 2,00
     # ---------------------------------------------------------
     p["comprension"] += 0.30 * (
         1 if contiene(
@@ -423,7 +423,9 @@ def corregir(res):
         1.5
     )
 
-    # ---------------------------------------------------------
+    
+
+     # ---------------------------------------------------------
     # 5. LITERATURA = 2,00
     # ---------------------------------------------------------
     if exacta(res.get("l1", ""), "4"):
@@ -432,43 +434,33 @@ def corregir(res):
     if exacta(res.get("l2", ""), "arte mayor"):
         p["literatura"] += 0.30
 
-    met = normalizar(res.get("l3", ""))
-
-    # Normalizamos la respuesta para aceptar:
+    # MÉTRICA
+    # Se exige exactamente:
     # 10A 10B 10A 10B
-    # 10a 10b 10a 10b
-    # 10A, 10B, 10A, 10B
-    # 10-A 10-B 10-A 10-B
-    # 10 A 10 B 10 A 10 B
-    met_limpia = (
-        met
-        .replace(",", " ")
-        .replace(";", " ")
-        .replace("/", " ")
-        .replace("-", " ")
-    )
-
-    met_limpia = re.sub(
-        r"\s+",
-        " ",
-        met_limpia
-    ).strip()
-
-    # En este poema:
-    # - Los 4 versos tienen 10 sílabas métricas.
-    # - 10 sílabas = arte mayor.
-    # - El esquema de rima es ABAB.
     #
-    # Se acepta A/a y B/b indistintamente para no penalizar
-    # al alumno por escribir las letras en mayúscula o minúscula.
+    # Se permiten espacios o comas entre los grupos:
+    # 10A 10B 10A 10B
+    # 10A, 10B, 10A, 10B
+    # 10A,10B,10A,10B
+    #
+    # NO se acepta minúscula:
+    # 10a 10b 10a 10b
+    #
+    # NO se normaliza porque las letras deben ser MAYÚSCULAS.
 
-    metricas_validas = {
-        "10a 10b 10a 10b"
-    }
+    met = str(res.get("l3", "")).strip()
 
-    if met_limpia in metricas_validas:
+    # Convertimos comas o punto y coma en espacios.
+    # No modificamos las letras.
+    met = re.sub(r"[,;]+", " ", met)
+
+    # Dejamos un único espacio entre cada grupo.
+    met = re.sub(r"\s+", " ", met).strip()
+
+    if met == "10A 10B 10A 10B":
         p["literatura"] += 0.35
 
+    # SINALEFA
     sinal = normalizar(res.get("l5", ""))
 
     ok_sinal = (
@@ -497,6 +489,7 @@ def corregir(res):
     if ok_sinal:
         p["literatura"] += 0.35
 
+    # PERSONIFICACIÓN
     pers = normalizar(res.get("l6", ""))
 
     ok_pers = (
@@ -522,6 +515,7 @@ def corregir(res):
         2.0
     )
 
+    
     # ---------------------------------------------------------
     # 6. SINTAXIS = 1,00
     # ---------------------------------------------------------
@@ -1253,7 +1247,7 @@ with st.form("examen"):
 
     respuestas["l3"] = st.text_input(
         EXAM["literatura"]["preguntas"][2]["enunciado"],
-        help="Ejemplo: 10A 11B 11B 10A"
+        help="Ejemplo: 14A 11B 14B 10A. Puedes separar los grupos con espacios o comas"
     )
 
     respuestas["l4"] = st.selectbox(
