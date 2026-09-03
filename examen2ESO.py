@@ -75,14 +75,14 @@ El viajero sintió que aquel día iba a ser el primero de su nueva vida, que tod
             ]
         },
         "literatura": {
-            "poema":"""La luna brilla sobre el mar,
-            
-            las estrellas danzan en el cielo,
-            
-            el viento susurra junto al mar,
-            
-            y la noche se cubre de hielo..""",
-            
+            "poema":"""La luna brilla sobre el gran mar,
+
+                Las estrellas brillan sobre el cielo,
+                
+                El viento susurra junto al mar,
+                
+                Y la noche se cubre de hielo.""",
+                            
             "preguntas": [
                 {"id": "l1", "enunciado": "5.1. Número de versos"},
                 {"id": "l2", "enunciado": "5.2. ¿Arte mayor o menor?"},
