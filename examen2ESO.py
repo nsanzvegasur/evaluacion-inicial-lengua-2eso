@@ -82,8 +82,8 @@ como si todo fuera soledad.""",
                 {"id": "l2", "enunciado": "5.2. ¿Arte mayor o menor?"},
                 {"id": "l3", "enunciado": "5.3. Esquema métrico"},
                 {"id": "l4", "enunciado": "5.4. Tipo de rima"},
-                {"id": "l5", "enunciado": "5.5. Escribe una sinalefa y explica qué ocurre."},
-                {"id": "l6", "enunciado": "5.6. Escribe una personificación y explica por qué lo es."}
+                {"id": "l5", "enunciado": "5.5. Localiza una sinalefa y escribe las palabras exactas donde ocurre."},
+                {"id": "l6", "enunciado": "5.6. Localiza una personificación y escribe las palabras exactas donde ocurre."}
             ]
         },
         "sintaxis": [
