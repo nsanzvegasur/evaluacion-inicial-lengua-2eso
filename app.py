@@ -464,17 +464,15 @@ def corregir(res):
     if exacta(res.get("l4", ""), "consonante"):
         p["literatura"] += 0.35
 
-    # SINALEFA
+        # SINALEFA
     sinal = normalizar(res.get("l5", ""))
 
     ok_sinal = (
         any(
             x in sinal
             for x in [
-                "suave en",
-                "solo en",
-                "y el",
-                "la escuela"
+                "sobre el",
+                "junto al"
             ]
         )
         and any(
@@ -497,7 +495,7 @@ def corregir(res):
     pers = normalizar(res.get("l6", ""))
 
     ok_pers = (
-        "viento juega" in pers
+        "viento susurra" in pers
         and any(
             x in pers
             for x in [
@@ -513,11 +511,6 @@ def corregir(res):
 
     if ok_pers:
         p["literatura"] += 0.35
-
-    p["literatura"] = min(
-        round(p["literatura"], 4),
-        2.0
-    )
 
     
     # ---------------------------------------------------------
