@@ -654,25 +654,43 @@ def excel_individual(fila, respuestas, perfil):
     ws["A5"] = "Fecha y hora"
     ws["B5"] = fila["date"]
 
-    ws["A7"] = "NOTA FINAL"
+    # ---------------------------------------------------------
+    # NOTAS
+    # ---------------------------------------------------------
+    ws["A7"] = "NOTA DE ESTA PARTE (SOBRE 9)"
     ws["B7"] = fila["nota_examen_9"]
 
-    ws["A8"] = "Nota sin faltas"
+    ws["A8"] = "Nota antes del descuento por ortografía (sobre 9)"
     ws["B8"] = fila["nota_sin_faltas"]
 
     ws["A9"] = "Descuento por ortografía"
     ws["B9"] = fila["descuento_ortografia"]
 
-    ws["A11"] = "RESULTADOS POR ÁREAS"
-    ws["A11"].font = Font(bold=True)
+    ws["A10"] = "Producción escrita"
+    ws["B10"] = fila["produccion_escrita"]
 
-    fila_excel = 12
+    ws["A11"] = "Nota producción escrita (hasta 1 punto)"
+    ws["B11"] = fila["nota_produccion_escrita"]
+
+    ws["A12"] = "NOTA FINAL (SOBRE 10)"
+    ws["B12"] = fila["nota_final_10"]
+
+    # ---------------------------------------------------------
+    # RESULTADOS POR ÁREAS
+    # ---------------------------------------------------------
+    ws["A14"] = "RESULTADOS POR ÁREAS"
+    ws["A14"].font = Font(bold=True)
+
+    fila_excel = 15
 
     for clave, nombre_area in NOMBRES.items():
         ws.cell(fila_excel, 1).value = nombre_area
         ws.cell(fila_excel, 2).value = fila[clave]
         fila_excel += 1
 
+    # ---------------------------------------------------------
+    # PERFIL COMPETENCIAL
+    # ---------------------------------------------------------
     ws[f"A{fila_excel + 1}"] = "PERFIL COMPETENCIAL"
     ws[f"A{fila_excel + 1}"].font = Font(bold=True)
 
@@ -686,8 +704,8 @@ def excel_individual(fila, respuestas, perfil):
         )
         fila_perfil += 1
 
-    ws.column_dimensions["A"].width = 38
-    ws.column_dimensions["B"].width = 25
+    ws.column_dimensions["A"].width = 48
+    ws.column_dimensions["B"].width = 30
 
     # ---------------------------------------------------------
     # HOJA 2: RESPUESTAS
