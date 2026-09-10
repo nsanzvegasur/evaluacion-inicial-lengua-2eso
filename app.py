@@ -306,14 +306,31 @@ if st.session_state.examen_enviado:
     st.download_button("📊 Descargar Excel", data=st.session_state.resultado_excel, file_name=f"resultado_{fila['name']}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
     st.divider(); st.subheader("📊 Comparación con la clase")
     df = safe_read_results()
-    if not df.empty:
-        df_clase = df[df["group"] == fila["group"]].copy()
+    if not df.empty and "group" in df.columns:
+        df_clase = df[df["group"].astype(str) == str(fila["group"])].copy()
         if not df_clase.empty:
-            df_anon = df_clase.copy(); df_anon["name"] = [f"Alumno {i + 1}" for i in range(len(df_anon))]; fila_anonima = df_anon.iloc[-1]
+            df_anon = df_clase.copy()
+            df_anon["name"] = [f"Alumno {i + 1}" for i in range(len(df_anon))]
             try:
-                figura = comparativa(fila_anonima, df_anon)
-                if figura is not None: st.plotly_chart(figura, use_container_width=True)
-            except Exception: st.info("La comparativa no está disponible en este momento.")
+                figura = comparativa(df_anon)
+                if figura is not None:
+                    st.caption("Se muestra la nota de la prueba automática, sobre 9 puntos.")
+                    st.plotly_chart(figura, use_container_width=True)
+                    valores_clase = pd.to_numeric(df_clase["nota_examen_9"], errors="coerce").dropna()
+                    if not valores_clase.empty:
+                        media_clase = float(valores_clase.mean())
+                        diferencia = float(fila["nota_examen_9"]) - media_clase
+                        c1, c2 = st.columns(2)
+                        c1.metric("Media de la clase", f"{media_clase:.2f} / 9")
+                        c2.metric("Tu diferencia respecto a la media", f"{diferencia:+.2f}")
+                else:
+                    st.info("Todavía no hay notas suficientes para mostrar la comparativa.")
+            except Exception:
+                st.info("La comparativa no está disponible en este momento.")
+        else:
+            st.info("Todavía no hay resultados de tu grupo para realizar la comparativa.")
+    else:
+        st.info("Todavía no hay resultados de tu grupo para realizar la comparativa.")
     st.success("Tu evaluación está lista para descargar y entregar en Classroom."); st.stop()
 
 st.title("📚 Evaluación inicial de Lengua — 2.º ESO"); st.caption("Lengua Castellana y Literatura · Curso 2026-2027")
