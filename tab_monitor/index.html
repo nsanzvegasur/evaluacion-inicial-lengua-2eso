@@ -16,7 +16,11 @@
       send();
     }
   });
-  window.addEventListener('load', function () { resize(); send(); });
+  window.addEventListener('load', function () {
+    window.Streamlit.setComponentReady();
+    resize();
+    send();
+  });
   window.Streamlit.events.addEventListener(window.Streamlit.RENDER_EVENT, function () { resize(); });
 })();
 </script>
