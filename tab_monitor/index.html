@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Monitor</title></head>
+<body>
+<script src="https://unpkg.com/streamlit-component-lib@2.0.0/dist/index.js"></script>
+<script>
+(function () {
+  let count = 0;
+  function send() {
+    window.Streamlit.setComponentValue({count: count, timestamp: new Date().toISOString()});
+  }
+  function resize() { window.Streamlit.setFrameHeight(1); }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') {
+      count += 1;
+      send();
+    }
+  });
+  window.addEventListener('load', function () { resize(); send(); });
+  window.Streamlit.events.addEventListener(window.Streamlit.RENDER_EVENT, function () { resize(); });
+})();
+</script>
+</body>
+</html>
