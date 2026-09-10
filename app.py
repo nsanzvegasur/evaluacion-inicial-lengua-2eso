@@ -306,7 +306,8 @@ if st.session_state.examen_enviado:
     st.write(f"**Fecha y hora:** {fila['date']}"); st.metric("Nota de esta parte", f"{fila['nota_examen_9']:.2f} / 9")
     st.write(f"**Nota antes del descuento por ortografía:** {fila['nota_sin_faltas']:.2f} / 9")
     if int(fila.get("cambios_pestana", 0) or 0) > 0:
-        st.warning(f"⚠️ Durante el examen se detectaron {int(fila.get("cambios_pestana", 0) or 0)} cambios de pestaña o salida de la ventana.")
+        cambios = int(fila.get("cambios_pestana", 0) or 0)
+        st.warning(f"⚠️ Durante el examen se detectaron {cambios} cambios de pestaña o salida de la ventana.")
     st.divider(); st.subheader("📚 Resultados por áreas")
     columnas = st.columns(2)
     for i, (clave, nombre_area) in enumerate(NOMBRES.items()):
