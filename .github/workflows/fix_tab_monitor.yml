@@ -1,0 +1,31 @@
+name: Corregir monitor de pestañas
+on:
+  push:
+    paths-ignore:
+      - '.github/workflows/fix_tab_monitor.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Corregir app.py
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app.py')
+          s = p.read_text(encoding='utf-8')
+          bad = '        st.warning(f"⚠️ Durante el examen se detectaron {int(fila.get("cambios_pestana", 0) or 0)} cambios de pestaña o salida de la ventana.")'
+          good = '        cambios = int(fila.get("cambios_pestana", 0) or 0)\n        st.warning(f"⚠️ Durante el examen se detectaron {cambios} cambios de pestaña o salida de la ventana.")'
+          s = s.replace(bad, good)
+          p.write_text(s, encoding='utf-8')
+          PY
+          python -m py_compile app.py
+      - name: Guardar cambios
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.py
+          git diff --cached --quiet || git commit -m 'Corregir aviso de cambios de pestaña'
+          git push
