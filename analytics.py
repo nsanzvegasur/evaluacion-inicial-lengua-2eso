@@ -58,20 +58,22 @@ def radar_chart(datos, titulo="Perfil competencial"):
 # ============================================================
 
 def comparativa(df, fila=None):
-    """Genera la comparativa de notas del grupo.
+    """Genera la comparativa de las notas del grupo.
 
-    Acepta tanto la columna antigua ``Nota`` como la columna real que
-    guarda actualmente la aplicación: ``nota_final_10``.
-    ``fila`` se mantiene como argumento opcional para compatibilidad.
+    La prueba automática se guarda en ``nota_examen_9`` (sobre 9),
+    mientras que ``nota_final_10`` queda pendiente hasta la producción
+    escrita. Por eso la comparativa usa primero ``nota_examen_9``.
     """
     if df is None or getattr(df, "empty", True):
         return None
 
     columna = None
-    for candidata in ("nota_final_10", "Nota", "nota_examen_9"):
+    for candidata in ("nota_examen_9", "nota_final_10", "Nota"):
         if candidata in df.columns:
-            columna = candidata
-            break
+            valores_candidatos = pd.to_numeric(df[candidata], errors="coerce")
+            if valores_candidatos.notna().any():
+                columna = candidata
+                break
     if columna is None:
         return None
 
@@ -97,10 +99,11 @@ def comparativa(df, fila=None):
         annotation_text=f"Media de la clase: {media:.2f}",
         annotation_position="top left"
     )
+    max_nota = 9 if columna == "nota_examen_9" else 10
     fig.update_layout(
         title="Comparativa con la clase",
         xaxis=dict(title="Alumnos"),
-        yaxis=dict(title="Nota sobre 10", range=[0, 10]),
+        yaxis=dict(title=f"Nota sobre {max_nota}", range=[0, max_nota]),
         showlegend=False,
         margin=dict(l=40, r=40, t=70, b=80),
     )
