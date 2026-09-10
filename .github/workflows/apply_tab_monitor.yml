@@ -1,0 +1,84 @@
+name: Implementar monitor de pestañas
+on:
+  push:
+    paths:
+      - '.github/workflows/apply_tab_monitor.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Modificar app.py
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app.py')
+          s = p.read_text(encoding='utf-8')
+
+          s = s.replace(
+              'import unicodedata\nfrom datetime import datetime\n',
+              'import unicodedata\nfrom datetime import datetime\nfrom pathlib import Path\n\nimport streamlit.components.v1 as components\n'
+          )
+
+          s = s.replace(
+              'from analytics import radar_chart, comparativa, generar_perfil\n',
+              'from analytics import radar_chart, comparativa, generar_perfil\n\nTAB_MONITOR = components.declare_component("tab_monitor", path=str(Path(__file__).parent / "tab_monitor"))\n'
+          )
+
+          s = s.replace(
+              'if "resultado_csv" not in st.session_state:\n    st.session_state.resultado_csv = None\n',
+              'if "resultado_csv" not in st.session_state:\n    st.session_state.resultado_csv = None\n\nif "cambios_pestana" not in st.session_state:\n    st.session_state.cambios_pestana = 0\n'
+          )
+
+          old_excel = 'def excel_individual(fila, respuestas, perfil):'
+          new_excel = 'def excel_individual(fila, respuestas, perfil, cambios_pestana=0):'
+          s = s.replace(old_excel, new_excel, 1)
+          s = s.replace(
+              '    ws["A5"] = "Fecha y hora"; ws["B5"] = fila["date"]\n',
+              '    ws["A5"] = "Fecha y hora"; ws["B5"] = fila["date"]\n    ws["A6"] = "Cambios de pestaña detectados"; ws["B6"] = cambios_pestana\n'
+          )
+
+          marker = 'st.title("📚 Evaluación inicial de Lengua — 2.º ESO"); st.caption("Lengua Castellana y Literatura · Curso 2026-2027")\n'
+          replacement = marker + '''\n# Monitor de cambios de pestaña/ventana durante el examen.\nevento_pestana = TAB_MONITOR(key="monitor_pestana")\nif isinstance(evento_pestana, dict):\n    try:\n        nuevo = int(evento_pestana.get("count", 0))\n        if nuevo > st.session_state.cambios_pestana:\n            st.session_state.cambios_pestana = nuevo\n    except (TypeError, ValueError):\n        pass\n\nif st.session_state.cambios_pestana:\n    if st.session_state.cambios_pestana >= 3:\n        st.error("🚨 Se han detectado 3 cambios de pestaña o salida de la ventana. El examen se enviará automáticamente.")\n    else:\n        restante = 3 - st.session_state.cambios_pestana\n        st.warning(f"⚠️ Cambio de pestaña detectado ({st.session_state.cambios_pestana}). Evita salir del examen. Tras {restante} cambio(s) más, se enviará automáticamente.")\n'''
+          s = s.replace(marker, replacement, 1)
+
+          s = s.replace(
+              '    st.session_state.resultado_excel = excel_individual(fila, respuestas, perfil)\n',
+              '    st.session_state.resultado_excel = excel_individual(fila, respuestas, perfil, st.session_state.cambios_pestana)\n'
+          )
+
+          s = s.replace(
+              'if enviar:\n',
+              'if enviar or st.session_state.cambios_pestana >= 3:\n',
+              1
+          )
+
+          s = s.replace(
+              '    fila = {"name": nombre.strip(), "group": grupo, "date": fecha_hora, **scores, "nota_sin_faltas": round(nota_sin_faltas, 2), "faltas_ortografia": faltas_ortografia, "faltas_tildes": faltas_tildes, "descuento_ortografia": descuento, "nota_examen_9": nota_final, "produccion_escrita": "Pendiente", "nota_produccion_escrita": "", "nota_final_10": ""}\n',
+              '    fila = {"name": nombre.strip(), "group": grupo, "date": fecha_hora, **scores, "nota_sin_faltas": round(nota_sin_faltas, 2), "faltas_ortografia": faltas_ortografia, "faltas_tildes": faltas_tildes, "descuento_ortografia": descuento, "nota_examen_9": nota_final, "produccion_escrita": "Pendiente", "nota_produccion_escrita": "", "nota_final_10": "", "cambios_pestana": st.session_state.cambios_pestana}\n'
+          )
+
+          s = s.replace(
+              '    st.write(f"**Nota antes del descuento por ortografía:** {fila[\'nota_sin_faltas\']:.2f} / 9")\n',
+              '    st.write(f"**Nota antes del descuento por ortografía:** {fila[\'nota_sin_faltas\']:.2f} / 9")\n    if int(fila.get("cambios_pestana", 0) or 0) > 0:\n        st.warning(f"⚠️ Durante el examen se detectaron {int(fila.get(\"cambios_pestana\", 0) or 0)} cambios de pestaña o salida de la ventana.")\n'
+          )
+
+          # Añadir la nueva columna al CSV interno sin eliminar las existentes.
+          s = s.replace(
+              'campos = ["name", "group", "date", "comprension", "morfologia", "semantica", "textos", "literatura", "sintaxis", "nota_sin_faltas", "faltas_ortografia", "faltas_tildes", "descuento_ortografia", "nota_examen_9", "produccion_escrita", "nota_produccion_escrita", "nota_final_10"]',
+              'campos = ["name", "group", "date", "comprension", "morfologia", "semantica", "textos", "literatura", "sintaxis", "nota_sin_faltas", "faltas_ortografia", "faltas_tildes", "descuento_ortografia", "nota_examen_9", "produccion_escrita", "nota_produccion_escrita", "nota_final_10", "cambios_pestana"]'
+          )
+
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Comprobar sintaxis
+        run: python -m py_compile app.py
+      - name: Guardar cambios
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.py
+          git diff --cached --quiet || git commit -m 'Añadir detección de cambios de pestaña en el examen'
+          git push
