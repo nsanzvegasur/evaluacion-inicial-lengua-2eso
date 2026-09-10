@@ -4,6 +4,9 @@ import os
 import re
 import unicodedata
 from datetime import datetime
+from pathlib import Path
+
+import streamlit.components.v1 as components
 
 import pandas as pd
 import streamlit as st
@@ -11,6 +14,8 @@ from openpyxl import Workbook
 
 from examen2ESO import EXAMEN
 from analytics import radar_chart, comparativa, generar_perfil
+
+TAB_MONITOR = components.declare_component("tab_monitor", path=str(Path(__file__).parent / "tab_monitor"))
 
 st.set_page_config(
     page_title="Evaluación Inicial Lengua 2.º ESO",
@@ -37,6 +42,9 @@ if "resultado_excel" not in st.session_state:
 
 if "resultado_csv" not in st.session_state:
     st.session_state.resultado_csv = None
+
+if "cambios_pestana" not in st.session_state:
+    st.session_state.cambios_pestana = 0
 
 EXAM = EXAMEN["2ESO"]
 
@@ -225,7 +233,7 @@ def detectar_ortografia(respuestas):
 
 
 def guardar_csv(fila):
-    campos = ["name", "group", "date", "comprension", "morfologia", "semantica", "textos", "literatura", "sintaxis", "nota_sin_faltas", "faltas_ortografia", "faltas_tildes", "descuento_ortografia", "nota_examen_9", "produccion_escrita", "nota_produccion_escrita", "nota_final_10"]
+    campos = ["name", "group", "date", "comprension", "morfologia", "semantica", "textos", "literatura", "sintaxis", "nota_sin_faltas", "faltas_ortografia", "faltas_tildes", "descuento_ortografia", "nota_examen_9", "produccion_escrita", "nota_produccion_escrita", "nota_final_10", "cambios_pestana"]
     if os.path.exists(CSV_FILE):
         try: df = pd.read_csv(CSV_FILE)
         except Exception: df = pd.DataFrame(columns=campos)
@@ -244,7 +252,7 @@ def csv_individual(fila):
     return salida.getvalue().encode("utf-8-sig")
 
 
-def excel_individual(fila, respuestas, perfil):
+def excel_individual(fila, respuestas, perfil, cambios_pestana=0):
     from openpyxl.styles import Font, Alignment
     wb = Workbook()
     ws = wb.active; ws.title = "Resultado"
@@ -252,6 +260,7 @@ def excel_individual(fila, respuestas, perfil):
     ws["A3"] = "Alumno"; ws["B3"] = fila["name"]
     ws["A4"] = "Grupo"; ws["B4"] = fila["group"]
     ws["A5"] = "Fecha y hora"; ws["B5"] = fila["date"]
+    ws["A6"] = "Cambios de pestaña detectados"; ws["B6"] = cambios_pestana
     ws["A7"] = "NOTA DE ESTA PARTE (SOBRE 9)"; ws["B7"] = fila["nota_examen_9"]
     ws["A8"] = "Nota antes del descuento por ortografía (sobre 9)"; ws["B8"] = fila["nota_sin_faltas"]
     ws["A9"] = "Descuento por ortografía"; ws["B9"] = fila["descuento_ortografia"]
@@ -296,6 +305,8 @@ if st.session_state.examen_enviado:
     st.info("✍️ **IMPORTANTE:** Has terminado esta parte de la evaluación. Esta prueba automática vale **9 puntos**. Ahora debes continuar con la **producción escrita**, que se corregirá aparte y supondrá hasta **1 punto adicional**.")
     st.write(f"**Fecha y hora:** {fila['date']}"); st.metric("Nota de esta parte", f"{fila['nota_examen_9']:.2f} / 9")
     st.write(f"**Nota antes del descuento por ortografía:** {fila['nota_sin_faltas']:.2f} / 9")
+    if int(fila.get("cambios_pestana", 0) or 0) > 0:
+        st.warning(f"⚠️ Durante el examen se detectaron {int(fila.get("cambios_pestana", 0) or 0)} cambios de pestaña o salida de la ventana.")
     st.divider(); st.subheader("📚 Resultados por áreas")
     columnas = st.columns(2)
     for i, (clave, nombre_area) in enumerate(NOMBRES.items()):
@@ -334,6 +345,23 @@ if st.session_state.examen_enviado:
     st.success("Tu evaluación está lista para descargar y entregar en Classroom."); st.stop()
 
 st.title("📚 Evaluación inicial de Lengua — 2.º ESO"); st.caption("Lengua Castellana y Literatura · Curso 2026-2027")
+
+# Monitor de cambios de pestaña/ventana durante el examen.
+evento_pestana = TAB_MONITOR(key="monitor_pestana")
+if isinstance(evento_pestana, dict):
+    try:
+        nuevo = int(evento_pestana.get("count", 0))
+        if nuevo > st.session_state.cambios_pestana:
+            st.session_state.cambios_pestana = nuevo
+    except (TypeError, ValueError):
+        pass
+
+if st.session_state.cambios_pestana:
+    if st.session_state.cambios_pestana >= 3:
+        st.error("🚨 Se han detectado 3 cambios de pestaña o salida de la ventana. El examen se enviará automáticamente.")
+    else:
+        restante = 3 - st.session_state.cambios_pestana
+        st.warning(f"⚠️ Cambio de pestaña detectado ({st.session_state.cambios_pestana}). Evita salir del examen. Tras {restante} cambio(s) más, se enviará automáticamente.")
 nombre = st.text_input("Nombre y apellidos")
 grupo = st.selectbox("Grupo", ["", "2º A", "2º B", "2º C", "2º D"])
 examen_bloqueado = False
@@ -391,7 +419,7 @@ with st.form("examen"):
     for q in EXAM["sintaxis"][5:]: respuestas[q["id"]] = st.selectbox(f"**{q['frase']}** → {q['enunciado']}", ["", "enunciativa", "interrogativa", "exclamativa", "desiderativa", "imperativa"], key=q["id"])
     enviar = st.form_submit_button("📤 ENVIAR EXAMEN", use_container_width=True)
 
-if enviar:
+if enviar or st.session_state.cambios_pestana >= 3:
     if not nombre.strip(): st.error("Escribe tu nombre y apellidos."); st.stop()
     if not grupo: st.error("Selecciona tu grupo."); st.stop()
     puntos, nota_sin_faltas = corregir(respuestas)
@@ -401,7 +429,7 @@ if enviar:
     nota_final = round(max(0.0, nota_sin_faltas - descuento), 2)
     scores = {clave: round(puntos[clave] / PESOS[clave] * 10, 2) for clave in PESOS}
     fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    fila = {"name": nombre.strip(), "group": grupo, "date": fecha_hora, **scores, "nota_sin_faltas": round(nota_sin_faltas, 2), "faltas_ortografia": faltas_ortografia, "faltas_tildes": faltas_tildes, "descuento_ortografia": descuento, "nota_examen_9": nota_final, "produccion_escrita": "Pendiente", "nota_produccion_escrita": "", "nota_final_10": ""}
+    fila = {"name": nombre.strip(), "group": grupo, "date": fecha_hora, **scores, "nota_sin_faltas": round(nota_sin_faltas, 2), "faltas_ortografia": faltas_ortografia, "faltas_tildes": faltas_tildes, "descuento_ortografia": descuento, "nota_examen_9": nota_final, "produccion_escrita": "Pendiente", "nota_produccion_escrita": "", "nota_final_10": "", "cambios_pestana": st.session_state.cambios_pestana}
     guardar_csv(fila)
     perfil = generar_perfil(scores)
     st.session_state.examen_enviado = True
@@ -409,5 +437,5 @@ if enviar:
     st.session_state.resultado_respuestas = respuestas
     st.session_state.resultado_perfil = perfil
     st.session_state.resultado_csv = csv_individual(fila)
-    st.session_state.resultado_excel = excel_individual(fila, respuestas, perfil)
+    st.session_state.resultado_excel = excel_individual(fila, respuestas, perfil, st.session_state.cambios_pestana)
     st.rerun()
