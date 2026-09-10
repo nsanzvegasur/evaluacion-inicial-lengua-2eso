@@ -303,7 +303,6 @@ if st.session_state.examen_enviado:
     st.divider(); st.subheader("📝 Perfil de aprendizaje")
     for item in perfil: st.write(f"• {item['texto']}")
     st.divider(); st.subheader("📥 Descargar resultados")
-    st.download_button("📄 Descargar CSV", data=st.session_state.resultado_csv, file_name=f"resultado_{fila['name']}.csv", mime="text/csv", use_container_width=True)
     st.download_button("📊 Descargar Excel", data=st.session_state.resultado_excel, file_name=f"resultado_{fila['name']}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
     st.divider(); st.subheader("📊 Comparación con la clase")
     df = safe_read_results()
